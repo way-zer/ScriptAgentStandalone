@@ -26,10 +26,6 @@ dependencies {
     compile("org.jetbrains.exposed:exposed-dao:0.24.1")
     compile("org.jetbrains.exposed:exposed-java-time:0.24.1")
     compile("io.github.config4k:config4k:0.4.1")
-    //coreWeb
-    compile("org.slf4j:slf4j-simple:1.7.28")
-    compile("io.javalin:javalin:3.8.0")
-    compile("com.fasterxml.jackson.core:jackson-databind:2.10.1")
     //coreStandalone
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.2.1")
     compile("org.jline:jline-terminal:3.3.1")//3.3.1 is the version in kotlin compiler
