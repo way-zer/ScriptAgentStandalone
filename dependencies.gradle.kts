@@ -1,5 +1,4 @@
-val libraryVersion = "1.3.2"
-val kwebVersion = "0.7.0"
+val libraryVersion = "1.3.3"
 
 repositories {
 //    maven("http://maven.aliyun.com/nexus/content/groups/public/")
