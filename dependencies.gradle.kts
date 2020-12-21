@@ -29,4 +29,7 @@ dependencies {
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.2.1")
     compile("org.jline:jline-terminal:3.3.1")//3.3.1 is the version in kotlin compiler
     compile("org.jline:jline-reader:3.3.1")
+    //ktor
+    compile("io.ktor:ktor-server-jetty:1.4.0")
+    compile("io.ktor:ktor-jackson:1.4.0")
 }
