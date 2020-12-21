@@ -30,7 +30,7 @@ onEnable {
                 """.trimIndent().with("list" to list)
                     )
                 }
-                val module = arg[0].let(ScriptManager::getScript)?.let { it as? IInitScript }
+                val module = arg[0].let(ScriptManager::getScript)?.let { it as? IModuleScript }
                     ?: return@body reply("[red]找不到模块".with())
                 val list = module.children.map {
                     val enable = if (it.enabled) "purple" else "reset"
@@ -53,7 +53,7 @@ onEnable {
             permission = "scriptAgent.control.reload"
             onComplete {
                 onComplete(0) {
-                    (arg[0].split('/')[0].let(ScriptManager::getScript)?.let { it as IInitScript }?.children
+                    (arg[0].split('/')[0].let(ScriptManager::getScript)?.let { it as IModuleScript }?.children
                         ?: ScriptManager.loadedInitScripts.values).map { it.id }
                 }
             }
@@ -62,12 +62,12 @@ onEnable {
                 GlobalScope.launch {
                     reply("[yellow]异步处理中".with())
                     val success: Boolean = when (val script = arg.getOrNull(0)?.let(ScriptManager::getScript)) {
-                        is IInitScript -> ScriptManager.loadModule(
+                        is IModuleScript -> ScriptManager.loadModule(
                             script.sourceFile,
                             force = true,
                             enable = true
                         ) != null
-                        is IContentScript -> ScriptManager.loadContent(
+                        is ISubScript -> ScriptManager.loadContent(
                             script.module, script.sourceFile,
                             force = true,
                             enable = true
@@ -94,7 +94,7 @@ onEnable {
                         ) != null
                         file.name.endsWith(Config.contentScriptSuffix) -> {
                             val module = ScriptManager.getScript(arg[0].split('/')[0])
-                            if (module !is IInitScript) return@launch reply("[red]找不到模块,请确定模块已先加载".with())
+                            if (module !is IModuleScript) return@launch reply("[red]找不到模块,请确定模块已先加载".with())
                             ScriptManager.loadContent(module, file, enable = true) != null
                         }
                         else -> return@launch reply("[red]不支持的文件格式".with())

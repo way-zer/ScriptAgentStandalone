@@ -11,7 +11,7 @@ onEnable {
             permission = "scriptAgent.info"
             onComplete {
                 onComplete(0) {
-                    (arg[0].split('/')[0].let(ScriptManager::getScript)?.let { it as IInitScript }?.children
+                    (arg[0].split('/')[0].let(ScriptManager::getScript)?.let { it as IModuleScript }?.children
                         ?: ScriptManager.loadedInitScripts.values).map { it.id }
                 }
             }
