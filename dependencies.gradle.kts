@@ -32,4 +32,6 @@ dependencies {
     //ktor
     compile("io.ktor:ktor-server-jetty:1.4.0")
     compile("io.ktor:ktor-jackson:1.4.0")
+    //mirai
+    compile("net.mamoe:mirai-core:1.2.2")
 }
