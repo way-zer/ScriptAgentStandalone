@@ -1,4 +1,4 @@
-val libraryVersion = "1.3.3"
+val libraryVersion = "1.4.1"
 
 repositories {
 //    maven("http://maven.aliyun.com/nexus/content/groups/public/")
