@@ -1,13 +1,10 @@
 @file:DependsModule("coreLibrary")
-@file:MavenDepends("net.mamoe:mirai-core:1.2.2", single = false)
-@file:MavenDepends("net.mamoe:mirai-core-qqandroid:1.2.2", single = false)
+@file:MavenDepends("net.mamoe:mirai-core-jvm:2.0-RC", single = false)
 
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
-import net.mamoe.mirai.Bot
-import net.mamoe.mirai.utils.DefaultLogger
-import net.mamoe.mirai.utils.DefaultLoginSolver
-import net.mamoe.mirai.utils.PlatformLogger
+import net.mamoe.mirai.BotFactory
+import net.mamoe.mirai.utils.*
 
 addDefaultImport("mirai.lib.*")
 addLibraryByClass("net.mamoe.mirai.Bot")
@@ -22,6 +19,11 @@ generateHelper()
 val enable by config.key(false, "是否启动机器人(开启前先设置账号密码)")
 val qq by config.key(1849301538L, "机器人qq号")
 val password by config.key("123456", "机器人qq密码")
+val qqProtocol by config.key(
+    BotConfiguration.MiraiProtocol.ANDROID_PAD,
+    "QQ登录类型，不同的类型可同时登录",
+    "可用值: ANDROID_PHONE ANDROID_PAD ANDROID_WATCH"
+)
 
 val channel = Channel<String>()
 
@@ -30,7 +32,8 @@ onEnable {
         println("机器人未开启,请先修改配置文件")
         return@onEnable
     }
-    DefaultLogger = { tag ->
+    MiraiLogger.setDefaultLoggerCreator { tag ->
+        @OptIn(MiraiInternalApi::class)
         object : PlatformLogger() {
             override fun info0(message: String?, e: Throwable?) {
                 if (tag?.startsWith("Bot") == true)
@@ -48,12 +51,12 @@ onEnable {
             override fun verbose0(message: String?, e: Throwable?): Unit = Unit
         }
     }
-    val bot = Bot(qq, password) {
+    val bot = BotFactory.newBot(qq, password) {
+        protocol = qqProtocol
         fileBasedDeviceInfo(Config.dataDirectory.resolve("miraiDeviceInfo.json").absolutePath)
         parentCoroutineContext = coroutineContext
-        loginSolver = DefaultLoginSolver(channel::receive)
+        loginSolver = StandardCharImageLoginSolver(channel::receive)
     }
-    logger.info("若出现验证需要输入信息,请使用重定向指令/sa mirai [要输入的内容]")
     launch {
         bot.login()
     }
