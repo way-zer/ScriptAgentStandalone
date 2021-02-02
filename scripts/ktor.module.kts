@@ -18,6 +18,7 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.jetty.*
+import ktor.lib.RouteHelper
 import ktor.lib.webInit
 import org.slf4j.event.Level
 import java.lang.ref.WeakReference
@@ -36,13 +37,18 @@ addDefaultImport("io.ktor.request.*")
 addDefaultImport("io.ktor.response.*")
 generateHelper()
 
-var server: ApplicationEngine? = null
 
 val webChildren = mutableSetOf<WeakReference<ISubScript>>()
 
-suspend fun restart() {
-    server?.stop(1000, 1000)
-    server = embeddedServer(Jetty, port = port, parentCoroutineContext = this.coroutineContext) {
+lateinit var application: Application
+val server = embeddedServer(Jetty, port = port, parentCoroutineContext = this.coroutineContext) {
+    application = this
+    restart()
+}
+
+fun restart() {
+    with(application) {
+        uninstallAllFeatures()
         install(ContentNegotiation) {
             jackson {
                 val module = SimpleModule()
@@ -65,15 +71,16 @@ suspend fun restart() {
             get("/testEnable") {
                 call.respond(enabled.toString())
             }
+            RouteHelper.root.set(this)
         }
         webChildren.removeIf { script ->
             script.get()?.apply {
                 if (!enabled) return@apply
-                webInit.forEach { it.invoke(this@embeddedServer);true }
+                webInit.forEach { it.invoke(this@with);true }
             }
             script.get() == null
         }
-    }.start(false)
+    }
 }
 
 var job: Job? = null
@@ -87,7 +94,7 @@ fun prepareRestart() {
 }
 
 onEnable {
-    prepareRestart()
+    server.start(wait = false)
 }
 onAfterContentEnable {
     if (it.webInit.getData().isEmpty()) return@onAfterContentEnable
@@ -95,5 +102,5 @@ onAfterContentEnable {
     prepareRestart()
 }
 onDisable {
-    server?.stop(1000, 1000)
+    server.stop(1000, 5000)
 }
