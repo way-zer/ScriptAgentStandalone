@@ -40,15 +40,12 @@ generateHelper()
 
 val webChildren = mutableSetOf<WeakReference<ISubScript>>()
 
-lateinit var application: Application
-val server = embeddedServer(Jetty, port = port, parentCoroutineContext = this.coroutineContext) {
-    application = this
-    restart()
-}
+var server: ApplicationEngine? = null
 
 fun restart() {
-    with(application) {
-        uninstallAllFeatures()
+    server?.stop(1000, 5000)
+    server = embeddedServer(Jetty, port = port, parentCoroutineContext = this.coroutineContext) {
+        //uninstallAllFeatures() //useless in current ktor, restart fully
         install(ContentNegotiation) {
             jackson {
                 val module = SimpleModule()
@@ -74,13 +71,13 @@ fun restart() {
             RouteHelper.root.set(this)
         }
         webChildren.removeIf { script ->
-            script.get()?.apply {
-                if (!enabled) return@apply
-                webInit.forEach { it.invoke(this@with);true }
-            }
+            script.get()?.run {
+                if (!enabled) null
+                else webInit
+            }?.forEach { it.invoke(this);true }
             script.get() == null
         }
-    }
+    }.start(false)
 }
 
 var job: Job? = null
@@ -94,7 +91,7 @@ fun prepareRestart() {
 }
 
 onEnable {
-    server.start(wait = false)
+    prepareRestart()
 }
 onAfterContentEnable {
     if (it.webInit.getData().isEmpty()) return@onAfterContentEnable
@@ -102,5 +99,5 @@ onAfterContentEnable {
     prepareRestart()
 }
 onDisable {
-    server.stop(1000, 5000)
+    server?.stop(1000, 5000)
 }

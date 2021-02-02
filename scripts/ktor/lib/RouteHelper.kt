@@ -79,6 +79,7 @@ object RouteHelper {
             }
             listenTo<ScriptDisableEvent> {
                 val routes = routes_key.run { script.get() } ?: return@listenTo
+                if (routes.isNotEmpty() && routes.first()::class.java != RouteInfo::class.java) return@listenTo//Class not same after ktor module reload
                 routes.forEach { info ->
                     val route = info.route ?: return@forEach
                     info.subRoute.forEach { it.removeSelf() }
