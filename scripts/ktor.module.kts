@@ -1,9 +1,9 @@
 @file:DependsModule("coreLibrary")
-@file:MavenDepends("io.ktor:ktor-server-jetty:1.4.0", single = false)
-@file:MavenDepends("com.fasterxml.jackson.core:jackson-databind:2.10.1")
-@file:MavenDepends("com.fasterxml.jackson.core:jackson-core:2.10.1")
-@file:MavenDepends("com.fasterxml.jackson.core:jackson-annotations:2.10.1")
-@file:MavenDepends("io.ktor:ktor-jackson:1.4.0", single = false)
+@file:MavenDepends("io.ktor:ktor-server-jetty:1.5.1", single = false)
+@file:MavenDepends("com.fasterxml.jackson.core:jackson-databind:2.10.2")
+@file:MavenDepends("com.fasterxml.jackson.core:jackson-core:2.10.2")
+@file:MavenDepends("com.fasterxml.jackson.core:jackson-annotations:2.10.2")
+@file:MavenDepends("io.ktor:ktor-jackson:1.5.1", single = false)
 @file:MavenDepends("javax.servlet:javax.servlet-api:3.1.0")
 
 import com.fasterxml.jackson.core.JsonParser

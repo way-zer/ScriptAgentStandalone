@@ -1,7 +1,7 @@
 val libraryVersion = "1.4.4"
 
 repositories {
-//    maven("http://maven.aliyun.com/nexus/content/groups/public/")
+//    maven("https://maven.aliyun.com/repository/public")
     mavenLocal()
     mavenCentral()
     jcenter()
@@ -20,7 +20,7 @@ dependencies {
     compile("cf.wayzer:ScriptAgent:$libraryVersion")
     //coreLibrary
     compile("cf.wayzer:PlaceHoldLib:2.1.0")
-    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.2.1")
+    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
     compile("org.jetbrains.exposed:exposed-core:0.29.1")
     compile("org.jetbrains.exposed:exposed-dao:0.29.1")
     compile("org.jetbrains.exposed:exposed-java-time:0.29.1")
@@ -30,8 +30,8 @@ dependencies {
     compile("org.jline:jline-terminal:3.3.1")//3.3.1 is the version in kotlin compiler
     compile("org.jline:jline-reader:3.3.1")
     //ktor
-    compile("io.ktor:ktor-server-jetty:1.4.0")
-    compile("io.ktor:ktor-jackson:1.4.0")
+    compile("io.ktor:ktor-server-jetty:1.5.1")
+    compile("io.ktor:ktor-jackson:1.5.1")
     //mirai
     compile("net.mamoe:mirai-core-api-jvm:2.0-RC")
 }
