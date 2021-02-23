@@ -45,10 +45,10 @@ onEnable {
                     super.info0(message)
             }
 
-            override fun debug0(message: String?): Unit = Unit
-            override fun debug0(message: String?, e: Throwable?): Unit = Unit
-            override fun verbose0(message: String?): Unit = Unit
-            override fun verbose0(message: String?, e: Throwable?): Unit = Unit
+            override fun debug0(message: String?) {}
+            override fun debug0(message: String?, e: Throwable?) {}
+            override fun verbose0(message: String?) {}
+            override fun verbose0(message: String?, e: Throwable?) {}
         }
     }
     val bot = BotFactory.newBot(qq, password) {

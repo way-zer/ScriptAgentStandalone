@@ -1,4 +1,5 @@
 val libraryVersion = "1.4.4"
+val exposedVersionn = "0.29.1"
 
 repositories {
 //    maven("https://maven.aliyun.com/repository/public")
@@ -19,16 +20,17 @@ dependencies {
     compile(kotlin("script-runtime"))
     compile("cf.wayzer:ScriptAgent:$libraryVersion")
     //coreLibrary
-    compile("cf.wayzer:PlaceHoldLib:2.1.0")
+    compile("cf.wayzer:PlaceHoldLib:3.1")
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
-    compile("org.jetbrains.exposed:exposed-core:0.29.1")
-    compile("org.jetbrains.exposed:exposed-dao:0.29.1")
-    compile("org.jetbrains.exposed:exposed-java-time:0.29.1")
+    compile("org.jetbrains.exposed:exposed-core:$exposedVersionn")
+    compile("org.jetbrains.exposed:exposed-dao:$exposedVersionn")
+    compile("org.jetbrains.exposed:exposed-java-time:$exposedVersionn")
     compile("io.github.config4k:config4k:0.4.1")
     //coreStandalone
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.2.1")
-    compile("org.jline:jline-terminal:3.3.1")//3.3.1 is the version in kotlin compiler
-    compile("org.jline:jline-reader:3.3.1")
+    compile("org.jline:jline-terminal:3.19.0")
+//    compile("org.jline:jline-terminal-jansi:3.19.0")
+    compile("org.jline:jline-reader:3.19.0")
     //ktor
     compile("io.ktor:ktor-server-jetty:1.5.1")
     compile("io.ktor:ktor-jackson:1.5.1")

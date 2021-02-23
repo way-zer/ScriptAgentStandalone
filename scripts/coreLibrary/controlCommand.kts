@@ -1,5 +1,7 @@
 package coreLibrary
 
+import cf.wayzer.script_agent.events.ModuleDisableEvent
+import cf.wayzer.script_agent.events.ScriptDisableEvent
 import kotlinx.coroutines.launch
 
 val thisRef = this
@@ -17,7 +19,7 @@ onEnable {
                 if (arg.isEmpty()) {
                     val list = ScriptManager.loadedInitScripts.values.map {
                         val enable = if (it.enabled) "purple" else "reset"
-                        "[{enable}]{name} [blue]{desc}\n".with(
+                        "[{enable}]{name} [blue]{desc}".with(
                             "enable" to enable,
                             "name" to it.id.padEnd(20),
                             "desc" to it.name
@@ -26,7 +28,7 @@ onEnable {
                     return@body reply(
                         """
                     [yellow]==== [light_yellow]已加载模块[yellow] ====
-                    {list}
+                    {list:${"\n"}}
                 """.trimIndent().with("list" to list)
                     )
                 }
@@ -34,7 +36,7 @@ onEnable {
                     ?: return@body reply("[red]找不到模块".with())
                 val list = module.children.map {
                     val enable = if (it.enabled) "purple" else "reset"
-                    "[{enable}]{name} [blue]{desc}\n".with(
+                    "[{enable}]{name} [blue]{desc}".with(
                         "enable" to enable,
                         "name" to it.id.padEnd(30),
                         "desc" to it.name
@@ -43,7 +45,7 @@ onEnable {
                 reply(
                     """
                 [yellow]==== [light_yellow]{module}脚本[yellow] ====
-                {list}
+                {list:${"\n"}}
             """.trimIndent().with("module" to module.name, "list" to list)
                 )
             }
@@ -75,6 +77,28 @@ onEnable {
                         else -> return@launch reply("[red]找不到模块或者脚本".with())
                     }
                     reply((if (success) "[green]重载成功" else "[red]加载失败").with())
+                }
+            }
+        })
+        addSub(CommandInfo(thisRef, "disable", "关闭一个脚本或者模块") {
+            usage = "<module[/script]>"
+            permission = "scriptAgent.control.disable"
+            onComplete {
+                onComplete(0) {
+                    (arg[0].split('/')[0].let(ScriptManager::getScript)?.let { it as IModuleScript }?.children
+                        ?: ScriptManager.loadedInitScripts.values).map { it.id }
+                }
+            }
+            body {
+                if (arg.isEmpty()) replyUsage()
+                GlobalScope.launch {
+                    reply("[yellow]异步处理中".with())
+                    when (val script = arg.getOrNull(0)?.let(ScriptManager::getScript)) {
+                        is IModuleScript -> ModuleDisableEvent(script).emit()
+                        is ISubScript -> ScriptDisableEvent(script).emit()
+                        else -> return@launch reply("[red]找不到模块或者脚本".with())
+                    }
+                    reply("[green]关闭脚本成功".with())
                 }
             }
         })

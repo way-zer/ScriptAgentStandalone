@@ -1,6 +1,6 @@
 //1. 不同数据库的驱动Maven,根据选择注释
-@file:MavenDepends("com.h2database:h2:1.4.200", single = false)
-//@file:MavenDepends("org.postgresql:postgresql:42.2.15", single = false)
+//@file:MavenDepends("com.h2database:h2:1.4.200", single = false)
+@file:MavenDepends("org.postgresql:postgresql:42.2.15", single = false)
 @file:Suppress("unused")
 
 package coreLibrary
@@ -29,11 +29,11 @@ fun h2(): () -> Connection {
 fun postgre(): () -> Connection {
     Class.forName("org.postgresql.Driver")
     //使用请修改此处连接方式与账号密码
-    return { DriverManager.getConnection("jdbc:postgresql://localhost:5432/mindustry", "mindustry", "") }
+    return { DriverManager.getConnection("jdbc:postgresql://db:5432/postgres", "postgres", "initPassword") }
 }
 
 onEnable {
     //3. 请重新注释此处
-    DataBaseApi.db.set(Database.connect(h2()))
-//    DataBaseApi.db.set(Database.connect(postgre()))
+//    DataBaseApi.db.set(Database.connect(h2()))
+    DataBaseApi.db.set(Database.connect(postgre()))
 }
