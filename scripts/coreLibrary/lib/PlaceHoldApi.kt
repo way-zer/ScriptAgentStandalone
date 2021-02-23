@@ -12,8 +12,8 @@ import cf.wayzer.placehold.DynamicVar
 import cf.wayzer.placehold.PlaceHoldApi
 import cf.wayzer.placehold.PlaceHoldContext
 import cf.wayzer.placehold.TypeBinder
-import cf.wayzer.script_agent.IBaseScript
-import cf.wayzer.script_agent.util.DSLBuilder
+import cf.wayzer.scriptAgent.define.ISubScript
+import cf.wayzer.scriptAgent.util.DSLBuilder
 import kotlin.reflect.KProperty
 
 typealias PlaceHoldString = PlaceHoldContext
@@ -36,7 +36,7 @@ object PlaceHold {
     }
 
     class ScriptTypeBinder<T : Any>(
-        private val script: IBaseScript,
+        private val script: ISubScript,
         private val namePrefix: String,
         private val binder: TypeBinder<T>
     ) {
@@ -52,12 +52,12 @@ object PlaceHold {
     }
 
     // Map of name to description
-    val IBaseScript.registeredVars by DSLBuilder.dataKeyWithDefault { mutableMapOf<String, String>() }
+    val ISubScript.registeredVars by DSLBuilder.dataKeyWithDefault { mutableMapOf<String, String>() }
 
     /**
      * @param v support [cf.wayzer.placehold.DynamicVar] even [PlaceHoldString] or any value
      */
-    fun register(script: IBaseScript, name: String, desc: String, v: Any?) {
+    fun register(script: ISubScript, name: String, desc: String, v: Any?) {
         PlaceHoldApi.registerGlobalVar(name, v)
         script.registeredVars[name] = desc
     }
@@ -67,7 +67,7 @@ object PlaceHold {
      * @param desc describe what you want to add
      */
     @Deprecated("use registerForType(script): ScriptTypeBinder<T> instead")
-    inline fun <reified T : Any> registerForType(script: IBaseScript, desc: String): TypeBinder<T> {
+    inline fun <reified T : Any> registerForType(script: ISubScript, desc: String): TypeBinder<T> {
         script.registeredVars["Type@${T::class.java.simpleName}"] = desc
         return PlaceHoldApi.typeBinder()
     }
@@ -75,7 +75,7 @@ object PlaceHold {
     /**
      * @see TypeBinder
      */
-    inline fun <reified T : Any> registerForType(script: IBaseScript): ScriptTypeBinder<T> {
+    inline fun <reified T : Any> registerForType(script: ISubScript): ScriptTypeBinder<T> {
         return ScriptTypeBinder(script, "Type@${T::class.java.simpleName}", PlaceHoldApi.typeBinder())
     }
 
@@ -102,16 +102,16 @@ fun String.with(vararg arg: Pair<String, Any>): PlaceHoldString = PlaceHoldApi.g
 /**
  * @see PlaceHold.register
  */
-fun IBaseScript.registerVar(name: String, desc: String, v: Any?) = PlaceHold.register(this, name, desc, v)
+fun ISubScript.registerVar(name: String, desc: String, v: Any?) = PlaceHold.register(this, name, desc, v)
 
 /**
  * @see PlaceHold.registerForType
  */
 @Suppress("DEPRECATION")
 @Deprecated("use registerVarForType() instead", ReplaceWith("IBaseScript.registerVarForType()"))
-inline fun <reified T : Any> IBaseScript.registerVarForType(desc: String) = PlaceHold.registerForType<T>(this, desc)
+inline fun <reified T : Any> ISubScript.registerVarForType(desc: String) = PlaceHold.registerForType<T>(this, desc)
 
 /**
  * @see PlaceHold.registerForType
  */
-inline fun <reified T : Any> IBaseScript.registerVarForType() = PlaceHold.registerForType<T>(this)
+inline fun <reified T : Any> ISubScript.registerVarForType() = PlaceHold.registerForType<T>(this)

@@ -3,9 +3,10 @@
 @file:MavenDepends("org.fusesource.jansi:jansi:2.1.0")
 @file:MavenDepends("org.jline:jline-reader:3.19.0")
 
-package coreMindustry
+package coreStandalone
 
 import org.jline.reader.*
+import java.io.InterruptedIOException
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
@@ -38,6 +39,8 @@ onEnable {
         while (!Thread.interrupted()) {
             val line = try {
                 reader.readLine("> ").let(RootCommands::trimInput)
+            } catch (e: InterruptedIOException) {
+                continue
             } catch (e: UserInterruptException) {
                 if (last != 1) {
                     println("Interrupt again to exit application")
@@ -55,8 +58,11 @@ onEnable {
                 }
                 println("Catch EndOfFile, reload all script")
                 ScriptManager.disableAll()
-                ScriptManager.loadedInitScripts.clear()
-                ScriptManager.loadDir(Config.rootDir)
+                ScriptManager.allScripts.filterKeys { Config.isModule(it) }.values.forEach {
+                    it.savedField = emptyMap()
+                    ScriptManager.loadScript(it)
+                }
+                ScriptManager.enableAll()
                 return@thread
             }
             last = 0

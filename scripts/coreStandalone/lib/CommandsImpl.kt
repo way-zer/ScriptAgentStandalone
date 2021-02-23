@@ -1,6 +1,6 @@
 package coreStandalone.lib
 
-import cf.wayzer.script_agent.ISubScript
+import cf.wayzer.scriptAgent.define.ISubScript
 import coreLibrary.lib.ColorApi
 import coreLibrary.lib.CommandContext
 import coreLibrary.lib.CommandInfo

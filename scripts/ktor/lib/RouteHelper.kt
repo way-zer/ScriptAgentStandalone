@@ -1,11 +1,11 @@
 package ktor.lib
 
-import cf.wayzer.script_agent.ISubScript
-import cf.wayzer.script_agent.events.ScriptDisableEvent
-import cf.wayzer.script_agent.events.ScriptEnableEvent
-import cf.wayzer.script_agent.getContextModule
-import cf.wayzer.script_agent.listenTo
-import cf.wayzer.script_agent.util.DSLBuilder
+import cf.wayzer.scriptAgent.define.ISubScript
+import cf.wayzer.scriptAgent.events.ScriptDisableEvent
+import cf.wayzer.scriptAgent.events.ScriptEnableEvent
+import cf.wayzer.scriptAgent.getContextScript
+import cf.wayzer.scriptAgent.listenTo
+import cf.wayzer.scriptAgent.util.DSLBuilder
 import coreLibrary.lib.util.Provider
 import io.ktor.routing.*
 import io.ktor.util.pipeline.*
@@ -71,7 +71,7 @@ object RouteHelper {
     }
 
     init {
-        RouteHelper::class.java.getContextModule()!!.apply {
+        RouteHelper::class.java.getContextScript().apply {
             listenTo<ScriptEnableEvent>(4) {
                 root.listenWithAutoCancel(script) {
                     script.initRoute(it)

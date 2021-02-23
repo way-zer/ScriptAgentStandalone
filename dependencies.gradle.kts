@@ -1,11 +1,11 @@
-val libraryVersion = "1.4.4"
+val libraryVersion = "1.5.0"
 val exposedVersionn = "0.29.1"
 
 repositories {
-//    maven("https://maven.aliyun.com/repository/public")
     mavenLocal()
-    mavenCentral()
+    //maven("https://maven.aliyun.com/repository/public")
     jcenter()
+    mavenCentral()
     maven(url = "https://www.jitpack.io")
     maven("https://dl.bintray.com/way-zer/maven")
 }
