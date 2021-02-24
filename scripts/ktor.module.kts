@@ -6,6 +6,7 @@
 @file:MavenDepends("io.ktor:ktor-jackson:1.5.1", single = false)
 @file:MavenDepends("javax.servlet:javax.servlet-api:3.1.0")
 
+import cf.wayzer.scriptAgent.events.ScriptEnableEvent
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
@@ -21,7 +22,6 @@ import io.ktor.server.jetty.*
 import ktor.lib.RouteHelper
 import ktor.lib.webInit
 import org.slf4j.event.Level
-import java.lang.ref.WeakReference
 
 val port by config.key(9090, "Web 端口")
 addLibraryByClass("io.ktor.application.Application")
@@ -37,8 +37,6 @@ addDefaultImport("io.ktor.request.*")
 addDefaultImport("io.ktor.response.*")
 generateHelper()
 
-
-val webChildren = mutableSetOf<WeakReference<ISubScript>>()
 
 var server: ApplicationEngine? = null
 
@@ -70,12 +68,8 @@ fun restart() {
             }
             RouteHelper.root.set(this)
         }
-        webChildren.removeIf { script ->
-            script.get()?.run {
-                if (!enabled) null
-                else webInit
-            }?.forEach { it.invoke(this);true }
-            script.get() == null
+        ScriptManager.allScripts.values.forEach { s ->
+            s.inst?.webInit?.forEach { it.invoke(this);true }
         }
     }.start(false)
 }
@@ -93,9 +87,8 @@ fun prepareRestart() {
 onEnable {
     prepareRestart()
 }
-onAfterContentEnable {
-    if (it.webInit.getData().isEmpty()) return@onAfterContentEnable
-    webChildren.add(WeakReference(it))
+listenTo<ScriptEnableEvent> {
+    if (script.webInit.getData().isEmpty()) return@listenTo
     prepareRestart()
 }
 onDisable {
