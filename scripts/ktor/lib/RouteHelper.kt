@@ -7,12 +7,13 @@ import cf.wayzer.scriptAgent.getContextScript
 import cf.wayzer.scriptAgent.listenTo
 import cf.wayzer.scriptAgent.util.DSLBuilder
 import coreLibrary.lib.util.Provider
+import io.ktor.http.*
 import io.ktor.routing.*
 import io.ktor.util.pipeline.*
 import ktor.lib.RouteHelper.routes
 
 object RouteHelper {
-    data class RouteInfo(val path: String, val body: Route.() -> Unit) {
+    data class RouteInfo(val path: String, val method: HttpMethod?, val body: Route.() -> Unit) {
         var route: Route? = null
         var subRoute: Collection<Route> = emptyList()
         var handler = emptySet<Any>()
@@ -60,7 +61,9 @@ object RouteHelper {
     private fun ISubScript.initRoute(root: Route) {
         val routes = routes_key.run { get() } ?: return
         routes.forEach { info ->
-            val route = root.createRouteFromPath(info.path)
+            var route = root.createRouteFromPath(info.path)
+            if (info.method != null)
+                route = route.createChild(HttpMethodRouteSelector(info.method))
             info.route = route
             val beforeR = route.subTree()
             val beforeH = route.handlers.toSet()
@@ -98,8 +101,16 @@ object RouteHelper {
  * 脚本Route帮助函数
  * path尽量使用终端节点
  * 避免与其他脚本使用相同的path，不然可能会出现错误
+ * 调用方法:
+ *   route("/xxx"){
+ *      get{}
+ *   }
+ *   或
+ *   route("/xxx",HttpMethod.Get){
+ *      handle{}
+ *   }
  */
 @ContextDsl
-fun ISubScript.route(path: String, body: Route.() -> Unit) {
-    routes.add(RouteHelper.RouteInfo(path, body))
+fun ISubScript.route(path: String, method: HttpMethod? = null, body: Route.() -> Unit) {
+    routes.add(RouteHelper.RouteInfo(path, method, body))
 }
