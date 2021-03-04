@@ -11,52 +11,16 @@ import io.ktor.http.*
 import io.ktor.routing.*
 import io.ktor.util.pipeline.*
 import ktor.lib.RouteHelper.routes
+import ktor.lib.util.RouteHandlerList
 
 object RouteHelper {
     data class RouteInfo(val path: String, val method: HttpMethod?, val body: Route.() -> Unit) {
-        var route: Route? = null
-        var subRoute: Collection<Route> = emptyList()
-        var handler = emptySet<Any>()
+        var handlerList: RouteHandlerList? = null
     }
 
     private val routes_key = DSLBuilder.DataKeyWithDefault("ktor_routes") { mutableSetOf<RouteInfo>() }
     val ISubScript.routes by routes_key
     val root = Provider<Route>()
-
-    private val Route.handlers
-        get() = Route::class.java.getDeclaredField("handlers").let {
-            it.isAccessible = true
-            it.get(this) as ArrayList<*>
-        }
-
-    private fun Route.removeCache() {
-        Route::class.java.getDeclaredField("cachedPipeline").let {
-            it.isAccessible = true
-            it.set(this, null)
-        }
-    }
-
-    private fun Route.subTree(): Map<String, Route> {
-        return if (children.isEmpty()) mapOf(toString() to this)
-        else {
-            val map = mutableMapOf<String, Route>()
-            children.forEach {
-                map.putAll(it.subTree())
-            }
-            map
-        }
-    }
-
-    private fun Route.removeSelf() {
-        parent?.let { p ->
-            val list = (p.children as MutableList<Route>)
-            list.remove(this)
-            if (list.isEmpty()) {
-                if (p.handlers.isEmpty())
-                    p.removeSelf()
-            }
-        }
-    }
 
     private fun ISubScript.initRoute(root: Route) {
         val routes = routes_key.run { get() } ?: return
@@ -64,12 +28,9 @@ object RouteHelper {
             var route = root.createRouteFromPath(info.path)
             if (info.method != null)
                 route = route.createChild(HttpMethodRouteSelector(info.method))
-            info.route = route
-            val beforeR = route.subTree()
-            val beforeH = route.handlers.toSet()
+            val before = RouteHandlerList().collect(route)
             info.body.invoke(route)
-            info.subRoute = (route.subTree() - beforeR).values.takeIf { it.isNotEmpty() }.orEmpty()
-            info.handler = (route.handlers.toMutableSet() - beforeH).takeIf { it.isNotEmpty() }.orEmpty()
+            info.handlerList = RouteHandlerList().collect(route) - before
         }
     }
 
@@ -83,15 +44,7 @@ object RouteHelper {
             listenTo<ScriptDisableEvent> {
                 val routes = routes_key.run { script.get() } ?: return@listenTo
                 if (routes.isNotEmpty() && routes.first()::class.java != RouteInfo::class.java) return@listenTo//Class not same after ktor module reload
-                routes.forEach { info ->
-                    val route = info.route ?: return@forEach
-                    info.subRoute.forEach { it.removeSelf() }
-                    val handler = route.handlers
-                    handler.removeAll(info.handler)
-                    if (route.children.isEmpty() && handler.isEmpty())
-                        route.removeSelf()
-                    else route.removeCache()
-                }
+                routes.forEach { it.handlerList?.tryRemoveAll() }
             }
         }
     }
@@ -99,8 +52,7 @@ object RouteHelper {
 
 /**
  * 脚本Route帮助函数
- * path尽量使用终端节点
- * 避免与其他脚本使用相同的path，不然可能会出现错误
+ * note: 禁止对返回的Route使用intercept,否则可能造成错误
  * 调用方法:
  *   route("/xxx"){
  *      get{}
