@@ -1,10 +1,16 @@
-@file:DependsModule("coreLibrary")
-@file:MavenDepends("io.ktor:ktor-server-jetty:1.5.1", single = false)
-@file:MavenDepends("com.fasterxml.jackson.core:jackson-databind:2.10.2")
-@file:MavenDepends("com.fasterxml.jackson.core:jackson-core:2.10.2")
-@file:MavenDepends("com.fasterxml.jackson.core:jackson-annotations:2.10.2")
-@file:MavenDepends("io.ktor:ktor-jackson:1.5.1", single = false)
-@file:MavenDepends("javax.servlet:javax.servlet-api:3.1.0")
+@file:Depends("coreLibrary")
+@file:Import("io.ktor:ktor-server-jetty:1.5.1", mavenDepends = true)
+@file:Import("com.fasterxml.jackson.core:jackson-databind:2.10.2", mavenDependsSingle = true)
+@file:Import("com.fasterxml.jackson.core:jackson-core:2.10.2", mavenDependsSingle = true)
+@file:Import("com.fasterxml.jackson.core:jackson-annotations:2.10.2", mavenDependsSingle = true)
+@file:Import("io.ktor:ktor-jackson:1.5.1", mavenDepends = true)
+@file:Import("javax.servlet:javax.servlet-api:3.1.0", mavenDependsSingle = true)
+@file:Import("ktor.lib.*", defaultImport = true)
+@file:Import("io.ktor.application.*", defaultImport = true)
+@file:Import("io.ktor.http.*", defaultImport = true)
+@file:Import("io.ktor.routing.*", defaultImport = true)
+@file:Import("io.ktor.request.*", defaultImport = true)
+@file:Import("io.ktor.response.*", defaultImport = true)
 
 import cf.wayzer.scriptAgent.events.ScriptEnableEvent
 import com.fasterxml.jackson.core.JsonParser
@@ -24,17 +30,6 @@ import ktor.lib.webInit
 import org.slf4j.event.Level
 
 val port by config.key(9090, "Web 端口")
-addLibraryByClass("io.ktor.application.Application")
-addLibraryByClass("io.ktor.util.pipeline.Pipeline")
-addLibraryByClass("io.ktor.http.HttpStatusCode")
-addLibraryByClass("com.fasterxml.jackson.core.Version")
-addLibraryByClass("com.fasterxml.jackson.databind.Module")
-addDefaultImport("ktor.lib.*")
-addDefaultImport("io.ktor.application.*")
-addDefaultImport("io.ktor.http.*")
-addDefaultImport("io.ktor.routing.*")
-addDefaultImport("io.ktor.request.*")
-addDefaultImport("io.ktor.response.*")
 generateHelper()
 
 

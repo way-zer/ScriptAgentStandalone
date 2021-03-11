@@ -1,4 +1,4 @@
-val libraryVersion = "1.5.0"
+val libraryVersion = "1.6.0"
 val exposedVersionn = "0.29.1"
 
 repositories {

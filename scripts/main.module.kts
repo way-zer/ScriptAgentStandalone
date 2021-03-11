@@ -1,4 +1,4 @@
-@file:DependsModule("coreStandalone")
+@file:Depends("coreStandalone")
+@file:Import("main.lib.*", defaultImport = true)
 
-addDefaultImport("main.lib.*")
 generateHelper()

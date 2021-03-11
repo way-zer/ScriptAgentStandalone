@@ -15,7 +15,7 @@ onEnable {
                 fun Collection<ScriptInfo>.toReply(pad: Int) = map {
                     val enable = if (it.enabled) "purple" else "reset"
                     "[{enable}][{state}] {name} [blue]{desc}".with(
-                        "enable" to enable, "state" to it.state, "name" to it.id.padEnd(pad),
+                        "enable" to enable, "state" to it.scriptState, "name" to it.id.padEnd(pad),
                         "desc" to (it.inst?.name ?: it.failReason)
                     )
                 }

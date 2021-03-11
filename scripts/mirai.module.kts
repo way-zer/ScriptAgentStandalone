@@ -1,19 +1,18 @@
-@file:DependsModule("coreLibrary")
-@file:MavenDepends("net.mamoe:mirai-core-jvm:2.0-RC", single = false)
+@file:Depends("coreLibrary")
+@file:Import("net.mamoe:mirai-core-jvm:2.0-RC", mavenDepends = true)
+@file:Import("mirai.lib.*", defaultImport = true)
+@file:Import("net.mamoe.mirai.event.*", defaultImport = true)
+@file:Import("net.mamoe.mirai.event.events.*", defaultImport = true)
+@file:Import("net.mamoe.mirai.message.*", defaultImport = true)
+@file:Import("net.mamoe.mirai.message.data.*", defaultImport = true)
+@file:Import("net.mamoe.mirai.contact.*", defaultImport = true)
 
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.sendBlocking
 import net.mamoe.mirai.BotFactory
 import net.mamoe.mirai.utils.*
 
-addDefaultImport("mirai.lib.*")
-addLibraryByClass("net.mamoe.mirai.Bot")
-addDefaultImport("net.mamoe.mirai.Bot")
-addDefaultImport("net.mamoe.mirai.event.*")
-addDefaultImport("net.mamoe.mirai.event.events.*")
-addDefaultImport("net.mamoe.mirai.message.*")
-addDefaultImport("net.mamoe.mirai.message.data.*")
-addDefaultImport("net.mamoe.mirai.contact.*")
 generateHelper()
 
 val enable by config.key(false, "是否启动机器人(开启前先设置账号密码)")
@@ -25,7 +24,7 @@ val qqProtocol by config.key(
     "可用值: ANDROID_PHONE ANDROID_PAD ANDROID_WATCH"
 )
 
-val channel = Channel<String>()
+val channel = Channel<String>(onBufferOverflow = BufferOverflow.DROP_LATEST)
 
 onEnable {
     if (!enable) {
