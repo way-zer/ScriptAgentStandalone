@@ -1,6 +1,7 @@
+@file:Depends("coreLibrary/DBApi")
 //1. 不同数据库的驱动Maven,根据选择注释
-//@file:MavenDepends("com.h2database:h2:1.4.200", single = false)
-@file:MavenDepends("org.postgresql:postgresql:42.2.15", single = false)
+@file:Import("com.h2database:h2:1.4.200", mavenDepends = false)
+//@file:Import("org.postgresql:postgresql:42.2.15", mavenDepends = true)
 @file:Suppress("unused")
 
 package coreLibrary
@@ -34,6 +35,6 @@ fun postgre(): () -> Connection {
 
 onEnable {
     //3. 请重新注释此处
-//    DataBaseApi.db.set(Database.connect(h2()))
-    DataBaseApi.db.set(Database.connect(postgre()))
+    DBApi.DB.db.set(Database.connect(h2()))
+//    DBApi.DB.db.set(Database.connect(postgre()))
 }
