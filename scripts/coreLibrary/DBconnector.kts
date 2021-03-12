@@ -1,6 +1,6 @@
 @file:Depends("coreLibrary/DBApi")
 //1. 不同数据库的驱动Maven,根据选择注释
-@file:Import("com.h2database:h2:1.4.200", mavenDepends = false)
+@file:Import("com.h2database:h2:1.4.200", mavenDepends = true)
 //@file:Import("org.postgresql:postgresql:42.2.15", mavenDepends = true)
 @file:Suppress("unused")
 

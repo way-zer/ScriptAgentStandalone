@@ -1,5 +1,5 @@
 @file:Depends("coreLibrary")
-@file:Import("net.mamoe:mirai-core-jvm:2.0-RC", mavenDepends = true)
+@file:Import("net.mamoe:mirai-core-jvm:2.4.0", mavenDepends = true)
 @file:Import("mirai.lib.*", defaultImport = true)
 @file:Import("net.mamoe.mirai.event.*", defaultImport = true)
 @file:Import("net.mamoe.mirai.event.events.*", defaultImport = true)
