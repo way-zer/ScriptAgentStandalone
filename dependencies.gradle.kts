@@ -8,7 +8,7 @@ repositories {
 }
 
 dependencies {
-    val libraryVersion = "1.6.0"
+    val libraryVersion = "1.6.1"
     val pluginCompile by configurations
     pluginCompile("cf.wayzer:ScriptAgent:$libraryVersion")
     pluginCompile("cf.wayzer:LibraryManager:1.4")
