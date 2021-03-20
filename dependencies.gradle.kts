@@ -23,6 +23,7 @@ dependencies {
     compile("cf.wayzer:PlaceHoldLib:3.1")
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
     compile("io.github.config4k:config4k:0.4.1")
+    compile("org.slf4j:slf4j-simple:1.7.29")
     //coreLib/DBApi
     val exposedVersionn = "0.29.1"
     compile("org.jetbrains.exposed:exposed-core:$exposedVersionn")
@@ -39,4 +40,6 @@ dependencies {
     compile("io.ktor:ktor-jackson:1.5.1")
     //mirai
     compile("net.mamoe:mirai-core-api-jvm:2.4.0")
+    //mindustryProxy
+    compile("io.netty:netty-all:4.1.60.Final")
 }
