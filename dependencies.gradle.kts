@@ -38,5 +38,5 @@ dependencies {
     compile("io.ktor:ktor-server-jetty:1.5.1")
     compile("io.ktor:ktor-jackson:1.5.1")
     //mirai
-    compile("net.mamoe:mirai-core-api-jvm:2.4.0")
+    compile("net.mamoe:mirai-core-api-jvm:2.5.0")
 }
