@@ -1,14 +1,13 @@
 repositories {
     mavenLocal()
-    //maven("https://maven.aliyun.com/repository/public")
-    jcenter()
+    if (System.getProperty("user.timezone") == "Asia/Shanghai")
+        maven(url = "https://maven.aliyun.com/repository/public")
     mavenCentral()
     maven(url = "https://www.jitpack.io")
-    maven("https://dl.bintray.com/way-zer/maven")
 }
 
 dependencies {
-    val libraryVersion = "1.7.1"
+    val libraryVersion = "1.7.1.1"
     val pluginCompile by configurations
     pluginCompile("cf.wayzer:ScriptAgent:$libraryVersion")
     pluginCompile("cf.wayzer:LibraryManager:1.4.1")
