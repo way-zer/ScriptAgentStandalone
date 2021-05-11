@@ -7,20 +7,32 @@ import mindustryProxy.lib.packet.*
 
 class StreamableHandler : ChannelDuplexHandler() {
     private var lastId = 0
-    private val streamableMap = mutableMapOf<Int, StreamBegin>()
+    private val streamableMap = mutableMapOf<Int, StreamBegin.StreamBuilder>()
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         val packet = msg as Packet
         if (packet is StreamChunk) {
-            val info = streamableMap[packet.id]
-            val result = info?.tryBuild(packet)
-            if (result != null) {
-                ctx.fireChannelRead(Registry.decodeWithId(info.type, result.stream))
+            var info: StreamBegin.StreamBuilder? = null
+            val result = synchronized(streamableMap) {
+                info = streamableMap[packet.id] ?: return@synchronized false
+                info!!.tryBuild(packet).also {
+                    if (it && info!!.built != null) {
+                        streamableMap.remove(packet.id)
+                    }
+                }
+            }
+            if (result) {
+                packet.release()
+                info!!.built?.let {
+                    ctx.fireChannelRead(Registry.decodeWithId(info!!.type, it.stream))
+                }
                 return
             }
         }
         ctx.fireChannelRead(packet)
-        if (packet is StreamBegin && packet.needBuild)
-            streamableMap[packet.id] = packet
+        if (packet is StreamBegin && packet.needBuild) {
+            streamableMap[packet.id]?.release()
+            streamableMap[packet.id] = StreamBegin.StreamBuilder(packet.id, packet.total, packet.type)
+        }
     }
 
     override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
@@ -32,6 +44,7 @@ class StreamableHandler : ChannelDuplexHandler() {
             while (stream.readableBytes() > 512)
                 ctx.write(StreamChunk(cid, stream.readSlice(512)))
             ctx.write(StreamChunk(cid, stream.readRetainedSlice(stream.readableBytes())), promise)
+            msg.release()
         } else ctx.write(msg, promise)
     }
 }

@@ -1,6 +1,7 @@
 package mindustryProxy.lib
 
-import mindustryProxy.lib.event.PlayerConnectEvent
+import cf.wayzer.scriptAgent.emit
+import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.ConnectPacket
 import mindustryProxy.lib.packet.Packet
@@ -9,7 +10,7 @@ import mindustryProxy.lib.protocol.BossHandler
 class ProxiedPlayer {
     private lateinit var clientCon: BossHandler.Connection
     private var server: BossHandler.Connection? = null
-    lateinit var connectPacket: ConnectPacket
+    var connectPacket: ConnectPacket = ConnectPacket.NULL
 
     fun connected(con: BossHandler.Connection) {
         clientCon = con
@@ -18,15 +19,19 @@ class ProxiedPlayer {
 
     fun handle(packet: Packet, fromServer: Boolean) {
         if (!fromServer && packet is ConnectPacket) {
+            if (connectPacket != ConnectPacket.NULL)
+                error("Player ${connectPacket.name} has connected")
             connectPacket = packet
-            val event = PlayerConnectEvent(this, true).also { it.emit() }
-            if (event.cancelled) close()
-            else Manager.connectServer(this)
+            Manager.connected(this)
+            ReferenceCountUtil.release(packet)
             return
         }
-        if (PlayerPacketEvent(this, packet, fromServer).also { it.emit() }.cancelled) return
+        if (PlayerPacketEvent(this, packet, fromServer).emit().cancelled) {
+            ReferenceCountUtil.release(packet)
+            return
+        }
         if (fromServer) clientCon.sendPacket(packet, packet.udp)
-        else server?.sendPacket(packet, packet.udp)
+        else server?.sendPacket(packet, packet.udp) ?: ReferenceCountUtil.release(packet)
     }
 
     fun connectedServer(con: BossHandler.Connection) {

@@ -1,18 +1,18 @@
 package mindustryProxy.lib.protocol
 
 import io.netty.bootstrap.Bootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.socket.DatagramChannel
-import io.netty.channel.socket.DatagramPacket
+import io.netty.buffer.ByteBuf
+import io.netty.channel.*
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.ProxiedPlayer
 import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.Packet
+import mindustryProxy.lib.packet.PingInfo
+import mindustryProxy.lib.packet.Registry
+import java.io.EOFException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 
@@ -37,31 +37,26 @@ class UpStreamConnection(private val player: ProxiedPlayer) : BossHandler.Connec
     }
 
     fun connect(server: InetSocketAddress) {
-
         address = server.address
-        val initializer = Initializer(this)
         udp = Bootstrap().group(Server.group).channel(NioDatagramChannel::class.java)
-            .handler(initializer).connect(server).channel()
+            .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
+            .handler(Initializer(true, this))
+            .connect(server).channel()
         tcp = Bootstrap().group(Server.group).channel(NioSocketChannel::class.java)
-            .handler(initializer).connect(server).channel()
+            .handler(Initializer(false, this)).connect(server).channel()
     }
 
     private fun finishConnect() {
         player.connectedServer(this)
     }
 
-    class Initializer(private val upstream: UpStreamConnection) : ChannelInitializer<Channel>(), BossHandler.Handler {
+    class Initializer(private val udp: Boolean, private val upstream: UpStreamConnection) :
+        ChannelInitializer<Channel>(), BossHandler.Handler {
         override fun initChannel(ch: Channel) {
             Server.initChannel(ch)
             ch.pipeline().get(BossHandler::class.java).handler = this
-            if (ch is DatagramChannel) {
-                ch.pipeline().addAfter(
-                    Server.Handler.TcpLengthDecoder.name, "UDPUnpack",
-                    object : ChannelInboundHandlerAdapter() {
-                        override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-                            ctx.fireChannelRead((msg as DatagramPacket).content())
-                        }
-                    })
+            if (udp) {
+                ch.pipeline().addAfter(Server.Handler.TcpLengthDecoder.name, "UDPUnpack", UDPUnpack)
             }
         }
 
@@ -70,7 +65,6 @@ class UpStreamConnection(private val player: ProxiedPlayer) : BossHandler.Connec
         }
 
         override fun handle(con: BossHandler.Connection, packet: Packet) {
-            Server.logger.info("Upstream: $packet")
             when (packet) {
                 is FrameworkMessage.RegisterTCP -> {
                     upstream.sendPacket(FrameworkMessage.RegisterUDP(packet.id), udp = true)
@@ -79,10 +73,55 @@ class UpStreamConnection(private val player: ProxiedPlayer) : BossHandler.Connec
                     upstream.finishConnect()
                 }
             }
+            ReferenceCountUtil.release(packet)
         }
 
         override fun disconnected(con: BossHandler.Connection) {
             con.close()
+        }
+    }
+
+    object Ping {
+        /**
+         * @throws EOFException connection reset
+         * @throws ConnectTimeoutException timeout
+         */
+        operator fun invoke(server: InetSocketAddress, timeoutMillis: Long = 5000): PingInfo? {
+            var result: PingInfo? = null
+            var cause: Throwable? = null
+            Bootstrap().group(Server.group)
+                .channel(NioDatagramChannel::class.java)
+                .handler(object : ChannelInitializer<Channel>() {
+                    override fun initChannel(ch: Channel) {
+                        ch.pipeline().addLast(UDPUnpack)
+                        ch.pipeline().addLast(object : ChannelInboundHandlerAdapter() {
+                            override fun channelActive(ctx: ChannelHandlerContext) {
+                                val out = ctx.alloc().buffer()
+                                Registry.encode(out, FrameworkMessage.DiscoverHost)
+                                ctx.writeAndFlush(out)
+                            }
+
+                            override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
+                                msg as ByteBuf
+                                result = PingInfo.decode(msg)
+                                msg.release()
+                                ctx.close()
+                            }
+
+                            override fun channelInactive(ctx: ChannelHandlerContext) {
+                                if (cause == null)
+                                    cause = EOFException()
+                                ctx.close()
+                            }
+                        })
+                    }
+                }).connect(server).also {
+                    if (!it.channel().closeFuture().await(timeoutMillis))
+                        cause = ConnectTimeoutException()
+                }
+            if (result == null && cause != null)
+                throw cause!!
+            return result
         }
     }
 }

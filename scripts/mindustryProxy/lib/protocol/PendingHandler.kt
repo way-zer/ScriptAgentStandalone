@@ -1,8 +1,9 @@
 package mindustryProxy.lib.protocol
 
 import io.netty.channel.Channel
+import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.Manager
-import mindustryProxy.lib.Server
+import mindustryProxy.lib.UDPServer
 import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.Packet
 import java.net.InetAddress
@@ -27,23 +28,22 @@ object PendingHandler : BossHandler.Handler {
         override fun isActive() = tcp.isActive
         override fun close() {
             tcp.close()
-            Server.Udp.disconnect(tcp)
+            UDPServer.Registry.unregisterTcp(tcp)
         }
     }
 
     override fun connected(channel: Channel): BossHandler.Connection {
         val con = Connection(channel)
-        val id = Server.Udp.registerTcp(channel)
+        val id = UDPServer.Registry.registerTcp(channel)
         con.sendPacket(FrameworkMessage.RegisterTCP(id), udp = false)
         return con
     }
 
     override fun handle(con: BossHandler.Connection, packet: Packet) {
-        println(packet)
         if (packet.udp && packet is FrameworkMessage.RegisterUDP) {
             con.sendPacket(packet, false)
             finishConnect(con)
-        }
+        } else ReferenceCountUtil.release(packet)
     }
 
     private fun finishConnect(con: BossHandler.Connection) {

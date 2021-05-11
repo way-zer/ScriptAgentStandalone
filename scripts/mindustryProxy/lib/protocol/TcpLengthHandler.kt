@@ -27,11 +27,11 @@ interface TcpLengthHandler {
         override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
             if (ctx.channel() !is DatagramChannel) {
                 msg as ByteBuf
-                val out = ctx.alloc().buffer().retain()
-                out.writeShort(msg.readableBytes())
-                out.writeBytes(msg)
+                val header = ctx.alloc().buffer()
+                header.writeShort(msg.readableBytes())
+                val out = ctx.alloc().compositeBuffer(2)
+                out.addComponents(true, header, msg)
                 ctx.write(out, promise)
-                out.release()
             } else ctx.write(msg, promise)
         }
     }

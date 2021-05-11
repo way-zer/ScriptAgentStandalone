@@ -15,10 +15,16 @@ data class ConnectPacket(
     }
 
     companion object : Factory<ConnectPacket>(3) {
+        val NULL = ConnectPacket(
+            -1, "null",
+            "NULL", "null", "null", byteArrayOf(),
+            false, 0, emptyList()
+        )
+
         override fun decode(buf: ByteBuf): ConnectPacket {
             return ConnectPacket(
                 buf.readInt(), buf.readString(),
-                buf.readString(), buf.readString(), buf.readString(), buf.readBytes(16).toByteArray(),
+                buf.readString(), buf.readString(), buf.readString(), buf.readSlice(16).toByteArray(),
                 buf.readBoolean(), buf.readInt(), List(buf.readByte().toInt()) { buf.readString() }
             )
         }

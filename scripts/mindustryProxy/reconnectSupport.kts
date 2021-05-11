@@ -9,6 +9,7 @@ import java.io.DataInputStream
 import java.net.InetSocketAddress
 
 listenTo<PlayerPacketEvent> {
+    val packet = packet
     if (packet is InvokePacket && packet.type == 71) {
         cancelled = true
         fun ByteBuf.readStr(): String {

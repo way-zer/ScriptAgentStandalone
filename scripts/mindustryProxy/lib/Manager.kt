@@ -1,5 +1,6 @@
 package mindustryProxy.lib
 
+import cf.wayzer.scriptAgent.emit
 import mindustryProxy.lib.event.PingEvent
 import mindustryProxy.lib.event.PlayerConnectEvent
 import mindustryProxy.lib.event.PlayerDisconnectEvent
@@ -14,31 +15,42 @@ object Manager {
     var defaultServer = InetSocketAddress("mdt.wayzer.cf", 7000)
     val players = mutableSetOf<ProxiedPlayer>()
     fun connected(con: BossHandler.Connection) {
+        Server.logger.info("Connection from ${con.address}")
         val player = ProxiedPlayer()
         player.connected(con)
         if (con.isActive()) {
-            val event = PlayerConnectEvent(player, false).also { it.emit() }
+            val event = PlayerConnectEvent(player, false).emit()
             if (event.cancelled) player.close()
             else players.add(player)
         }
     }
 
+    fun connected(player: ProxiedPlayer) {
+        Server.logger.info("Player ${player.connectPacket.name} connected")
+        val event = PlayerConnectEvent(player, true).emit()
+        if (event.cancelled) player.close()
+        else connectServer(player)
+    }
+
     fun getPingInfo(address: InetAddress): PingInfo {
+        Server.logger.info("Ping from $address")
         val default = PingInfo(
             "MindustryProxy", "None", 1, 1, 126, "proxy",
             PingInfo.GameMode.Editor, -1, "Powered by WayZer", "custom"
         )
-        val event = PingEvent(address, default).also { it.emit() }
+        val event = PingEvent(address, default).emit()
         return event.result
     }
 
     fun disconnected(player: ProxiedPlayer) {
+        Server.logger.info("Player ${player.connectPacket.name} disconnect")
         players.remove(player)
         PlayerDisconnectEvent(player).emit()
     }
 
     fun connectServer(player: ProxiedPlayer, server: InetSocketAddress? = null) {
-        val event = PlayerServerEvent(player, server ?: defaultServer).also { it.emit() }
+        val event = PlayerServerEvent(player, server ?: defaultServer).emit()
+        Server.logger.info("Player ${player.connectPacket.name} <==> ${event.server}")
         UpStreamConnection(player).connect(event.server)
     }
 }
