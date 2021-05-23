@@ -1,9 +1,11 @@
 package mindustryProxy.lib
 
 import cf.wayzer.scriptAgent.emit
+import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.ConnectPacket
+import mindustryProxy.lib.packet.InvokePacket
 import mindustryProxy.lib.packet.Packet
 import mindustryProxy.lib.protocol.BossHandler
 
@@ -35,13 +37,16 @@ class ProxiedPlayer {
     }
 
     fun connectedServer(con: BossHandler.Connection) {
-        server.let { old ->
-            server = con
-            old?.close()
-        }
+        val old = server
+        server = con
+        old?.close()
+
         con.setHandler(serverHandler)
-        if (con.isActive()) con.sendPacket(connectPacket, false)
-        else close()
+        if (con.isActive()) {
+            if (old != null)//Send WorldBegin
+                clientCon.sendPacket(InvokePacket(0, 0, Unpooled.EMPTY_BUFFER), false)
+            con.sendPacket(connectPacket, false)
+        } else close()
     }
 
     fun close() {

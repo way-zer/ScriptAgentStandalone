@@ -16,7 +16,7 @@ data class InvokePacket(val type: Int, val priority: Int, val data: ByteBuf) : P
             return InvokePacket(
                 buf.readByte().toInt(),
                 buf.readByte().toInt(),
-                buf.readBytes(buf.readShort().toInt())
+                buf.readRetainedSlice(buf.readShort().toInt())
             )
         }
 

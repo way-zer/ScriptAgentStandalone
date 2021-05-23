@@ -18,7 +18,7 @@ interface TcpLengthHandler {
                 `in`.resetReaderIndex()
                 return
             }
-            out.add(`in`.readSlice(length).retain())
+            out.add(`in`.readRetainedSlice(length).asReadOnly())
         }
     }
 

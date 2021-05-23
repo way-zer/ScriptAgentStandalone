@@ -1,6 +1,7 @@
 package mindustryProxy.lib
 
 import cf.wayzer.scriptAgent.emit
+import kotlinx.coroutines.launch
 import mindustryProxy.lib.event.PingEvent
 import mindustryProxy.lib.event.PlayerConnectEvent
 import mindustryProxy.lib.event.PlayerDisconnectEvent
@@ -10,6 +11,7 @@ import mindustryProxy.lib.protocol.BossHandler
 import mindustryProxy.lib.protocol.UpStreamConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.util.logging.Level
 
 object Manager {
     var defaultServer = InetSocketAddress("mdt.wayzer.cf", 7000)
@@ -51,6 +53,13 @@ object Manager {
     fun connectServer(player: ProxiedPlayer, server: InetSocketAddress? = null) {
         val event = PlayerServerEvent(player, server ?: defaultServer).emit()
         Server.logger.info("Player ${player.connectPacket.name} <==> ${event.server}")
-        UpStreamConnection(player).connect(event.server)
+        Server.launch {
+            try {
+                val con = UpStreamConnection().connect(event.server)
+                player.connectedServer(con)
+            } catch (e: Throwable) {
+                Server.logger.log(Level.WARNING, "Player ${player.connectPacket.name} <=//=> ${event.server}", e)
+            }
+        }
     }
 }

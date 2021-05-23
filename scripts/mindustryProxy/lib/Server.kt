@@ -8,15 +8,20 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.ResourceLeakDetector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import mindustryProxy.lib.protocol.BossHandler
 import mindustryProxy.lib.protocol.PacketHandler
 import mindustryProxy.lib.protocol.StreamableHandler
 import mindustryProxy.lib.protocol.TcpLengthHandler
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
+import kotlin.coroutines.CoroutineContext
 
-object Server : ChannelInitializer<Channel>() {
+object Server : ChannelInitializer<Channel>(), CoroutineScope {
     var logger: Logger = Logger.getLogger("Server") //change to script logger if in script
+    override val coroutineContext: CoroutineContext
+        get() = group.asCoroutineDispatcher()
 
     internal var group = NioEventLoopGroup(16)
     private val onClose = mutableSetOf<() -> Unit>()

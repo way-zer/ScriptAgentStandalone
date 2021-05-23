@@ -57,7 +57,7 @@ class StreamChunk(val id: Int, val data: ByteBuf) : Packet(), ReferenceCounted b
 
     companion object : Factory<StreamChunk>(1) {
         override fun decode(buf: ByteBuf): StreamChunk {
-            return StreamChunk(buf.readInt(), buf.readBytes(buf.readShort().toInt()))
+            return StreamChunk(buf.readInt(), buf.readRetainedSlice(buf.readShort().toInt()))
         }
 
         override fun encode(buf: ByteBuf, obj: StreamChunk) {
@@ -78,7 +78,7 @@ open class Streamable(val stream: ByteBuf) : Packet(), ReferenceCounted by strea
 
 class WorldStream(stream: ByteBuf) : Streamable(stream) {
     companion object : Factory<WorldStream>(2) {
-        override fun decode(buf: ByteBuf): WorldStream = WorldStream(buf.readBytes(buf.readableBytes()))
+        override fun decode(buf: ByteBuf): WorldStream = WorldStream(buf.retainedSlice())
         override fun encode(buf: ByteBuf, obj: WorldStream) = error("Streamable handle in PacketHandler")
     }
 }

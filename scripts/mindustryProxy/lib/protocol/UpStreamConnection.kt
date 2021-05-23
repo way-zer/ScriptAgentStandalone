@@ -6,7 +6,8 @@ import io.netty.channel.*
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.util.ReferenceCountUtil
-import mindustryProxy.lib.ProxiedPlayer
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.suspendCancellableCoroutine
 import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.Packet
@@ -15,11 +16,14 @@ import mindustryProxy.lib.packet.Registry
 import java.io.EOFException
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.nio.channels.ClosedChannelException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
-class UpStreamConnection(private val player: ProxiedPlayer) : BossHandler.Connection {
+class UpStreamConnection : BossHandler.Connection {
     override lateinit var address: InetAddress
-    lateinit var tcp: Channel
-    lateinit var udp: Channel
+    private lateinit var tcp: Channel
+    private lateinit var udp: Channel
 
     override fun isActive() = tcp.isActive && udp.isActive
     override fun setHandler(handler: BossHandler.Handler) {
@@ -36,18 +40,25 @@ class UpStreamConnection(private val player: ProxiedPlayer) : BossHandler.Connec
         udp.disconnect()
     }
 
-    fun connect(server: InetSocketAddress) {
-        address = server.address
-        udp = Bootstrap().group(Server.group).channel(NioDatagramChannel::class.java)
-            .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
-            .handler(Initializer(true, this))
-            .connect(server).channel()
-        tcp = Bootstrap().group(Server.group).channel(NioSocketChannel::class.java)
-            .handler(Initializer(false, this)).connect(server).channel()
-    }
+    private val tcpBoot = Bootstrap().group(Server.group)
+        .channel(NioSocketChannel::class.java)
+        .handler(Initializer(false, this))
+    private val udpBoot: Bootstrap = Bootstrap().group(Server.group)
+        .channel(NioDatagramChannel::class.java)
+        .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
+        .handler(Initializer(true, this))
+    private var continuation: CancellableContinuation<Unit>? = null
 
-    private fun finishConnect() {
-        player.connectedServer(this)
+    suspend fun connect(server: InetSocketAddress): UpStreamConnection {
+        address = server.address
+        udp = udpBoot.connect(server).channel()
+        tcp = tcpBoot.connect(server).channel()
+        suspendCancellableCoroutine<Unit> { co ->
+            co.invokeOnCancellation { close() }
+            continuation = co
+        }
+        continuation = null
+        return this
     }
 
     class Initializer(private val udp: Boolean, private val upstream: UpStreamConnection) :
@@ -70,13 +81,22 @@ class UpStreamConnection(private val player: ProxiedPlayer) : BossHandler.Connec
                     upstream.sendPacket(FrameworkMessage.RegisterUDP(packet.id), udp = true)
                 }
                 is FrameworkMessage.RegisterUDP -> {
-                    upstream.finishConnect()
+                    if (upstream.continuation?.isCompleted == false)
+                        upstream.continuation?.resume(Unit)
                 }
             }
             ReferenceCountUtil.release(packet)
         }
 
         override fun disconnected(con: BossHandler.Connection) {
+            if (upstream.continuation?.isCompleted == false)
+                upstream.continuation?.resumeWithException(ClosedChannelException())
+            con.close()
+        }
+
+        override fun onError(con: BossHandler.Connection, e: Throwable) {
+            if (upstream.continuation?.isCompleted == false)
+                upstream.continuation?.resumeWithException(e)
             con.close()
         }
     }
