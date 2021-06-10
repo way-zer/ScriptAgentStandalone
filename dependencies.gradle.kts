@@ -1,10 +1,16 @@
 repositories {
     mavenLocal()
+    maven {
+        url = uri("https://packages.aliyun.com/maven/repository/2102713-release-0NVzQH/")
+        credentials {
+            username = "public@tinylake"
+            password = "8VN55CXacq4|)ya)qoIdUQRKIDlSgmz@"
+        }
+    }
     //maven("https://maven.aliyun.com/repository/public")
     jcenter()
     mavenCentral()
     maven(url = "https://www.jitpack.io")
-    maven("https://dl.bintray.com/way-zer/maven")
 }
 
 dependencies {
