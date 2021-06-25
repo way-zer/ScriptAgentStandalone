@@ -1,48 +1,47 @@
 package mindustryProxy.lib.protocol
 
-import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import mindustryProxy.lib.packet.Packet
-import java.net.InetAddress
 
-class BossHandler : ChannelInboundHandlerAdapter() {
-    interface Connection {
-        val address: InetAddress
-        fun setHandler(handler: Handler)
-        fun isActive(): Boolean
-        fun sendPacket(packet: Packet, udp: Boolean)
-        fun close()
-        fun Channel.setBossHandler(handler: Handler) {
-            pipeline().get(BossHandler::class.java).handler = handler
-        }
-    }
+class BossHandler(var handler: Handler) : ChannelInboundHandlerAdapter() {
+    class FailHandlePacket(packet: Packet, cause: Throwable) : Exception("Fail to handle $packet", cause)
 
     interface Handler {
         //only call once, useless for handler after init
-        fun connected(channel: Channel): Connection = throw UnsupportedOperationException()
+        fun connected(con: Connection) = Unit
         fun disconnected(con: Connection) = Unit
         fun handle(con: Connection, packet: Packet)
+
+        //time to flush
+        fun readComplete()
         fun onError(con: Connection, e: Throwable) {
             e.printStackTrace()
         }
     }
 
-    var handler: Handler = PendingHandler
     private lateinit var con: Connection
-
     override fun channelActive(ctx: ChannelHandlerContext) {
-        con = handler.connected(ctx.channel())
+        con = (ctx.channel() as CombinedChannel).wrapper
+        handler.connected(con)
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        handler.handle(con, msg as Packet)
+        checkRef(msg)
+        msg as Packet
+        try {
+            handler.handle(con, msg)
+        } catch (e: Exception) {
+            throw FailHandlePacket(msg, e)
+        }
+    }
+
+    override fun channelReadComplete(ctx: ChannelHandlerContext) {
+        handler.readComplete()
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         handler.disconnected(con)
-        con.close()
-        ctx.close()
     }
 
     override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {

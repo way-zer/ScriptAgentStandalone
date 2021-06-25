@@ -1,0 +1,21 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+TCPChannel --> [TcpLength]
+[TcpLength] --> [ShakeTimeout]
+[ShakeTimeout] --> [ShakeHand]
+
+UDPServer --> [UDPChannelHandler]
+[UDPChannelHandler] --> [MOTDHandler]
+[MOTDHandler] --> [ShakeHand]
+
+[TcpLength] --> [CombinedHandler]
+[UDPChannelHandler] --> () UDPChannel
+UDPChannel --> [CombinedHandler]
+
+[CombinedHandler] - [PacketHandler]
+[CombinedHandler] --> ()CombinedChannel
+CombinedChannel --> [ReadTimeout]
+[ReadTimeout] --> [StreamableHandler]
+[StreamableHandler] --> [BossHandler]
+@enduml

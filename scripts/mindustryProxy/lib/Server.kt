@@ -1,24 +1,28 @@
 package mindustryProxy.lib
 
 import cf.wayzer.scriptAgent.define.ScriptInfo
+import io.netty.bootstrap.Bootstrap
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.Channel
 import io.netty.channel.ChannelInitializer
+import io.netty.channel.ChannelOption
+import io.netty.channel.FixedRecvByteBufAllocator
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.DatagramChannel
+import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.timeout.ReadTimeoutHandler
-import io.netty.util.ResourceLeakDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
-import mindustryProxy.lib.protocol.BossHandler
-import mindustryProxy.lib.protocol.PacketHandler
-import mindustryProxy.lib.protocol.StreamableHandler
 import mindustryProxy.lib.protocol.TcpLengthHandler
+import mindustryProxy.lib.protocol.UDPChannel
+import mindustryProxy.lib.protocol.handShake.HandShakeHandler
+import mindustryProxy.lib.protocol.handShake.MOTDHandler
 import java.util.concurrent.TimeUnit
 import java.util.logging.Logger
 import kotlin.coroutines.CoroutineContext
 
-object Server : ChannelInitializer<Channel>(), CoroutineScope {
+object Server : CoroutineScope {
     var logger: Logger = Logger.getLogger("Server") //change to script logger if in script
     override val coroutineContext: CoroutineContext
         get() = group.asCoroutineDispatcher()
@@ -26,27 +30,32 @@ object Server : ChannelInitializer<Channel>(), CoroutineScope {
     internal var group = NioEventLoopGroup(16)
     private val onClose = mutableSetOf<() -> Unit>()
     fun start(port: Int) {
-        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED)
         if (group.isTerminated)
             group = NioEventLoopGroup(16)
-        UDPServer.start(group).bind(port)
+        Bootstrap().group(group).channel(NioDatagramChannel::class.java)
+            .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
+            .handler(object : ChannelInitializer<DatagramChannel>() {
+                override fun initChannel(ch: DatagramChannel) {
+                    ch.pipeline().apply {
+                        addLast(UDPChannel)
+                        addLast(MOTDHandler)
+//                        addLast(ShakeHand) //in MOTDHandler
+                    }
+                }
+            }).bind(port)
             .also { onClose += { it.channel().close() } }
         ServerBootstrap().group(group).channel(NioServerSocketChannel::class.java)
-            .childHandler(Server)
-            .bind(port)
+            .childHandler(object : ChannelInitializer<SocketChannel>() {
+                override fun initChannel(ch: SocketChannel) {
+                    ch.pipeline().apply {
+                        addLast(TcpLengthHandler())
+                        addLast(ReadTimeoutHandler(3))
+                        addLast(HandShakeHandler)
+                    }
+                }
+            }).bind(port)
             .also { onClose += { it.channel().close() } }
         logger.info("Host on $port")
-    }
-
-    public override fun initChannel(ch: Channel) {
-        ch.pipeline().apply {
-            addLast(Handler.Timeout.name, ReadTimeoutHandler(30))
-            addLast(Handler.TcpLengthDecoder.name, TcpLengthHandler.Decoder())
-            addLast(Handler.TcpLengthEncoder.name, TcpLengthHandler.Encoder)
-            addLast(Handler.PacketHandler.name, PacketHandler)
-            addLast(Handler.StreamableHandler.name, StreamableHandler())
-            addLast(Handler.BossHandler.name, BossHandler())
-        }
     }
 
     fun stop() {
@@ -65,11 +74,4 @@ object Server : ChannelInitializer<Channel>(), CoroutineScope {
         start(6567)
         Thread.sleep(99999999)
     }
-
-    //Just For Name
-    enum class Handler {
-        Timeout, TcpLengthDecoder, TcpLengthEncoder, PacketHandler, StreamableHandler, BossHandler
-    }
-    //For TCP: Timeout->TcpLength->PacketHandler->StreamableHandler->BossHandler
-    //For UDP: UDPUnpack->PacketHandler->TCP
 }

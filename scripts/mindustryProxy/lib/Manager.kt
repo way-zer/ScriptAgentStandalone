@@ -7,7 +7,7 @@ import mindustryProxy.lib.event.PlayerConnectEvent
 import mindustryProxy.lib.event.PlayerDisconnectEvent
 import mindustryProxy.lib.event.PlayerServerEvent
 import mindustryProxy.lib.packet.PingInfo
-import mindustryProxy.lib.protocol.BossHandler
+import mindustryProxy.lib.protocol.Connection
 import mindustryProxy.lib.protocol.UpStreamConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -16,11 +16,12 @@ import java.util.logging.Level
 object Manager {
     var defaultServer = InetSocketAddress("mdt.wayzer.cf", 7000)
     val players = mutableSetOf<ProxiedPlayer>()
-    fun connected(con: BossHandler.Connection) {
+
+    fun connected(con: Connection) {
         Server.logger.info("Connection from ${con.address}")
         val player = ProxiedPlayer()
         player.connected(con)
-        if (con.isActive()) {
+        if (con.isActive) {
             val event = PlayerConnectEvent(player, false).emit()
             if (event.cancelled) player.close()
             else players.add(player)
@@ -55,7 +56,7 @@ object Manager {
         Server.logger.info("Player ${player.connectPacket.name} <==> ${event.server}")
         Server.launch {
             try {
-                val con = UpStreamConnection().connect(event.server)
+                val con = UpStreamConnection.connect(event.server)
                 player.connectedServer(con)
             } catch (e: Throwable) {
                 Server.logger.log(Level.WARNING, "Player ${player.connectPacket.name} <=//=> ${event.server}", e)

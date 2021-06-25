@@ -2,7 +2,6 @@ package mindustryProxy.lib.packet
 
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
-import io.netty.buffer.Unpooled
 import mindustryProxy.lib.Server
 
 abstract class Packet {
@@ -12,11 +11,9 @@ abstract class Packet {
     abstract class Factory<T : Packet>(val packetId: Int?) {
         fun ByteBuf.toByteArray(): ByteArray {
             if (hasArray()) return array()
-            val tmp = Unpooled.buffer(readableBytes(), readableBytes())
-            tmp.writeBytes(this)
-            return tmp.array().also {
-                tmp.release()
-            }
+            val out = ByteArray(readableBytes())
+            readBytes(out)
+            return out
         }
 
         fun ByteBuf.readString(byte: Boolean = false): String {
@@ -61,6 +58,15 @@ object Registry {
             Server.logger.warning("Fail to decode packet: \n${ByteBufUtil.hexDump(buf)}")
             throw e
         }
+    }
+
+    fun decodeOnlyFrameworkMessage(buf: ByteBuf): FrameworkMessage? {
+        val id = buf.readByte().toInt()
+        if (id != FrameworkMessage.packetId) {
+            buf.readerIndex(buf.readerIndex() - 1)
+            return null
+        }
+        return FrameworkMessage.decode(buf)
     }
 
     fun encode(buf: ByteBuf, obj: Packet) {

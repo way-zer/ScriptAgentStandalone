@@ -8,15 +8,16 @@ import mindustryProxy.lib.packet.ConnectPacket
 import mindustryProxy.lib.packet.InvokePacket
 import mindustryProxy.lib.packet.Packet
 import mindustryProxy.lib.protocol.BossHandler
+import mindustryProxy.lib.protocol.Connection
 
 class ProxiedPlayer {
-    private lateinit var clientCon: BossHandler.Connection
-    private var server: BossHandler.Connection? = null
+    private lateinit var clientCon: Connection
+    private var server: Connection? = null
     var connectPacket: ConnectPacket = ConnectPacket.NULL
 
-    fun connected(con: BossHandler.Connection) {
+    fun connected(con: Connection) {
         clientCon = con
-        clientCon.setHandler(clientHandler)
+        clientCon.setBossHandler(clientHandler)
     }
 
     fun handle(packet: Packet, fromServer: Boolean) {
@@ -25,7 +26,6 @@ class ProxiedPlayer {
                 error("Player ${connectPacket.name} has connected")
             connectPacket = packet
             Manager.connected(this)
-            ReferenceCountUtil.release(packet)
             return
         }
         if (PlayerPacketEvent(this, packet, fromServer).emit().cancelled) {
@@ -36,16 +36,17 @@ class ProxiedPlayer {
         else server?.sendPacket(packet, packet.udp) ?: ReferenceCountUtil.release(packet)
     }
 
-    fun connectedServer(con: BossHandler.Connection) {
+    fun connectedServer(con: Connection) {
         val old = server
         server = con
         old?.close()
 
-        con.setHandler(serverHandler)
-        if (con.isActive()) {
+        con.setBossHandler(serverHandler)
+        if (con.isActive) {
             if (old != null)//Send WorldBegin
                 clientCon.sendPacket(InvokePacket(0, 0, Unpooled.EMPTY_BUFFER), false)
             con.sendPacket(connectPacket, false)
+            con.flush()
         } else close()
     }
 
@@ -56,15 +57,21 @@ class ProxiedPlayer {
     }
 
     private val clientHandler = object : BossHandler.Handler {
-        override fun disconnected(con: BossHandler.Connection) = close()
-        override fun handle(con: BossHandler.Connection, packet: Packet) = handle(packet, false)
+        override fun disconnected(con: Connection) = close()
+        override fun handle(con: Connection, packet: Packet) = handle(packet, false)
+        override fun readComplete() {
+            server?.flush()
+        }
     }
 
     private val serverHandler = object : BossHandler.Handler {
-        override fun disconnected(con: BossHandler.Connection) {
+        override fun disconnected(con: Connection) {
             if (con == server) close()
         }
 
-        override fun handle(con: BossHandler.Connection, packet: Packet) = handle(packet, true)
+        override fun handle(con: Connection, packet: Packet) = handle(packet, true)
+        override fun readComplete() {
+            clientCon.flush()
+        }
     }
 }
