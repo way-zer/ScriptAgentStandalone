@@ -53,11 +53,12 @@ object Manager {
 
     fun connectServer(player: ProxiedPlayer, server: InetSocketAddress? = null) {
         val event = PlayerServerEvent(player, server ?: defaultServer).emit()
-        Server.logger.info("Player ${player.connectPacket.name} <==> ${event.server}")
+        Server.logger.info("Player ${player.connectPacket.name} <--> ${event.server}")
         Server.launch {
             try {
                 val con = UpStreamConnection.connect(event.server)
                 player.connectedServer(con)
+                Server.logger.info("Player ${player.connectPacket.name} <==> ${event.server}")
             } catch (e: Throwable) {
                 Server.logger.log(Level.WARNING, "Player ${player.connectPacket.name} <=//=> ${event.server}", e)
             }

@@ -33,8 +33,10 @@ class StreamableHandler : MessageToMessageCodec<StreamChunk, Streamable>() {
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         super.channelRead(ctx, msg)
         if (msg is StreamBegin && msg.needBuild) {
-            streamableMap[msg.id]?.release()
-            streamableMap[msg.id] = StreamBegin.StreamBuilder(msg.id, msg.total, msg.type)
+            synchronized(streamableMap) {
+                streamableMap[msg.id]?.release()
+                streamableMap[msg.id] = StreamBegin.StreamBuilder(msg.id, msg.total, msg.type)
+            }
         }
     }
 

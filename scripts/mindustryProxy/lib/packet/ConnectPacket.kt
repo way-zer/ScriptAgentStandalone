@@ -5,8 +5,9 @@ import java.util.*
 
 data class ConnectPacket(
     val version: Int, val versionType: String,
-    val name: String, val lang: String, val usid: String, val uuid: ByteArray,
-    val mobile: Boolean, val color: Int, val mods: List<String>
+    val name: String, val lang: String, val usid: String,
+    val uuid: ByteArray, val mobile: Boolean,
+    val color: Int, val mods: List<String>
 ) : Packet() {
     override val factory: Factory<out Packet> get() = Companion
     fun getUuidString(): String {
@@ -23,24 +24,25 @@ data class ConnectPacket(
 
         override fun decode(buf: ByteBuf): ConnectPacket {
             return ConnectPacket(
-                buf.readInt(), buf.readString(),
-                buf.readString(), buf.readString(), buf.readString(), buf.readSlice(16).toByteArray(),
-                buf.readBoolean(), buf.readInt(), List(buf.readByte().toInt()) { buf.readString() }
+                buf.readInt(), buf.readStringB(),
+                buf.readStringB(), buf.readStringB(), buf.readStringB(),
+                buf.readSlice(16).toByteArray(), buf.readBoolean(),
+                buf.readInt(), List(buf.readByte().toInt()) { buf.readStringB() }
             )
         }
 
         override fun encode(buf: ByteBuf, obj: ConnectPacket) {
             buf.writeInt(obj.version)
-            buf.writeString(obj.versionType)
-            buf.writeString(obj.name)
-            buf.writeString(obj.lang)
-            buf.writeString(obj.usid)
+            buf.writeStringB(obj.versionType)
+            buf.writeStringB(obj.name)
+            buf.writeStringB(obj.lang)
+            buf.writeStringB(obj.usid)
             buf.writeBytes(obj.uuid)
             buf.writeBoolean(obj.mobile)
             buf.writeInt(obj.color)
             buf.writeByte(obj.mods.size)
             obj.mods.forEach {
-                buf.writeString(it)
+                buf.writeStringB(it)
             }
         }
     }

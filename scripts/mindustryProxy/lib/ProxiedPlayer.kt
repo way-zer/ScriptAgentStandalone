@@ -5,14 +5,16 @@ import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.ConnectPacket
-import mindustryProxy.lib.packet.InvokePacket
 import mindustryProxy.lib.packet.Packet
+import mindustryProxy.lib.packet.UnknownPacket
 import mindustryProxy.lib.protocol.BossHandler
 import mindustryProxy.lib.protocol.Connection
 
 class ProxiedPlayer {
-    private lateinit var clientCon: Connection
-    private var server: Connection? = null
+    lateinit var clientCon: Connection
+        private set
+    var server: Connection? = null
+        private set
     var connectPacket: ConnectPacket = ConnectPacket.NULL
 
     fun connected(con: Connection) {
@@ -44,13 +46,18 @@ class ProxiedPlayer {
         con.setBossHandler(serverHandler)
         if (con.isActive) {
             if (old != null)//Send WorldBegin
-                clientCon.sendPacket(InvokePacket(0, 0, Unpooled.EMPTY_BUFFER), false)
+                clientCon.sendPacket(UnknownPacket(88, Unpooled.EMPTY_BUFFER), false)
+//                clientCon.sendPacket(InvokePacket(0, 0, Unpooled.EMPTY_BUFFER), false)
             con.sendPacket(connectPacket, false)
             con.flush()
         } else close()
     }
 
+    @Volatile
+    var closed = false
     fun close() {
+        if (closed) return
+        closed = true
         server?.close()
         clientCon.close()
         Manager.disconnected(this)

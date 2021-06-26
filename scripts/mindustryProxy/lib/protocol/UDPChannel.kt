@@ -7,6 +7,7 @@ import io.netty.channel.ChannelOutboundBuffer
 import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.DatagramPacket
+import io.netty.util.ReferenceCountUtil
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 import java.util.concurrent.ConcurrentHashMap
@@ -27,6 +28,14 @@ class UDPChannel(val parent: DatagramChannel, val address: InetSocketAddress) : 
                 `in`.remove()
             }
             parent.flush()
+        }
+    }
+
+    override fun handleInboundMessage(msg: Any) {
+        try {
+            throw error("UnHandle Message$msg")
+        } finally {
+            ReferenceCountUtil.release(msg)
         }
     }
 
@@ -60,7 +69,8 @@ class UDPChannel(val parent: DatagramChannel, val address: InetSocketAddress) : 
         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
             msg as DatagramPacket
             val child = bound[msg.sender()] ?: return super.channelRead(ctx, msg)
-            child.handleInboundMessage(msg.content())
+            child.writeInbound(msg.content())
+            child.flushInbound()
         }
     }
 }

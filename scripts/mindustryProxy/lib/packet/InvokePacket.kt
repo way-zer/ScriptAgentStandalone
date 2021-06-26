@@ -3,6 +3,8 @@ package mindustryProxy.lib.packet
 import io.netty.buffer.ByteBuf
 import io.netty.util.ReferenceCounted
 
+@Suppress("DEPRECATION")
+@Deprecated("delete in 127, use UnknownPacket instead")
 data class InvokePacket(val type: Int, val priority: Int, val data: ByteBuf) : Packet(), ReferenceCounted by data {
     override val factory: Factory<out Packet> get() = Companion
 

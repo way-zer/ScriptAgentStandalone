@@ -18,7 +18,7 @@ import java.net.InetSocketAddress
  * Handler链为 [StreamableHandler] [BossHandler]
  */
 class CombinedChannel(private val tcp: SocketChannel, private val udp: Channel) : EmbeddedChannel(
-    tcp.isActive, true
+    false, true
 ) {
     override fun remoteAddress(): InetSocketAddress = tcp.remoteAddress()
 
@@ -69,6 +69,11 @@ class CombinedChannel(private val tcp: SocketChannel, private val udp: Channel) 
 
     @ChannelHandler.Sharable
     inner class CombinedHandler : ChannelDuplexHandler() {
+        override fun handlerAdded(ctx: ChannelHandlerContext) {
+            if (tcp.isActive && !this@CombinedChannel.isRegistered)
+                this@CombinedChannel.register()
+        }
+
         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
             val packet = Registry.decode(msg as ByteBuf)
             msg.release()

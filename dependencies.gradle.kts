@@ -40,4 +40,5 @@ dependencies {
     compile("net.mamoe:mirai-core-api-jvm:2.5.0")
     //mindustryProxy
     compile("io.netty:netty-all:4.1.60.Final")
+    compile("org.lz4:lz4-java:1.7.1")
 }
