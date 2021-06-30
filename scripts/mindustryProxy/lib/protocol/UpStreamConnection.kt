@@ -32,14 +32,15 @@ object UpStreamConnection {
             .handler(UDPUnpack)
 
     suspend fun connect(server: InetSocketAddress): Connection {
-        val tcp = tcpBoot.connect(server).channel()
         val udp = udpBoot.connect(server).channel()
+        val tcp = tcpBoot.register().channel()
         return suspendCancellableCoroutine {
             val combined = CombinedChannel(tcp as SocketChannel, udp)
             it.invokeOnCancellation { combined.close() }
             udp.pipeline().addLast(combined.handler)
             tcp.pipeline().addLast(combined.handler)
             combined.setBossHandler(UpStreamHandShake(it))
+            tcp.connect(server)
         }
     }
 

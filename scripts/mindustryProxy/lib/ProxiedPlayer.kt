@@ -26,6 +26,8 @@ class ProxiedPlayer {
         if (!fromServer && packet is ConnectPacket) {
             if (connectPacket != ConnectPacket.NULL)
                 error("Player ${connectPacket.name} has connected")
+            if (packet.version < 127)
+                return close()
             connectPacket = packet
             Manager.connected(this)
             return

@@ -68,6 +68,10 @@ object Registry {
     fun decodeWithId(packetId: Int, buf: ByteBuf): Packet {
         if (packetId == FrameworkMessage.packetId)
             return FrameworkMessage.decode(buf)
+        if (packetId == ConnectPacket.packetId && buf.getInt(buf.readerIndex()) in 105..126) {
+            buf.release()
+            throw UnsupportedOperationException("Not Support 126")
+        }
         return if (packetId in idMap) {
             val length = buf.readShort().toInt()
             val compression = buf.readBoolean()
@@ -92,9 +96,12 @@ object Registry {
     fun decode(buf: ByteBuf): Packet {
         try {
             return decodeWithId(buf.readByte().toInt(), buf)
+        } catch (e: UnsupportedOperationException) {
+            throw e
         } catch (e: Exception) {
             buf.readerIndex(0)
             Server.logger.warning("Fail to decode packet: \n${ByteBufUtil.hexDump(buf)}")
+            buf.release()
             throw e
         }
     }

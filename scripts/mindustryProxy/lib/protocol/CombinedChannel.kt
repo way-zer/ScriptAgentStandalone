@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.*
 import io.netty.channel.embedded.EmbeddedChannel
 import io.netty.channel.socket.SocketChannel
+import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.packet.Packet
 import mindustryProxy.lib.packet.Registry
@@ -42,6 +43,10 @@ class CombinedChannel(private val tcp: SocketChannel, private val udp: Channel) 
             last.handler = handler
             return
         }
+        initPipeline(BossHandler(handler))
+    }
+
+    private fun initPipeline(boss: BossHandler) {
         pipeline().addLast(object : ChannelOutboundHandlerAdapter() {
             override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise?) {
                 val packet = msg as Packet
@@ -61,8 +66,14 @@ class CombinedChannel(private val tcp: SocketChannel, private val udp: Channel) 
                 udp.flush()
             }
         })
+        pipeline().addLast(object : ReadTimeoutHandler(30) {
+            override fun readTimedOut(ctx: ChannelHandlerContext) {
+                if (this@CombinedChannel.isActive)
+                    this@CombinedChannel.close()
+            }
+        })
         pipeline().addLast(StreamableHandler())
-        pipeline().addLast(BossHandler(handler))
+        pipeline().addLast(boss)
         if (this.isActive)
             pipeline().fireChannelActive()
     }
