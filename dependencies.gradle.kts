@@ -1,20 +1,26 @@
 repositories {
     mavenLocal()
-    maven {
-        url = uri("https://packages.aliyun.com/maven/repository/2102713-release-0NVzQH/")
-        credentials {
-            username = "public@tinylake"
-            password = "8VN55CXacq4|)ya)qoIdUQRKIDlSgmz@"
+    if (System.getProperty("user.timezone") == "Asia/Shanghai") {
+        maven(url = "https://maven.aliyun.com/repository/public")
+    }
+    mavenCentral()
+    if (System.getProperty("user.timezone") != "Asia/Shanghai")//ScriptAgent
+        maven("https://maven.wayzer.workers.dev/")
+    else {
+        maven {
+            url = uri("https://packages.aliyun.com/maven/repository/2102713-release-0NVzQH/")
+            credentials {
+                username = "609f6fb4aa6381038e01fdee"
+                password = "h(7NRbbUWYrN"
+            }
         }
     }
-    //maven("https://maven.aliyun.com/repository/public")
-    jcenter()
-    mavenCentral()
     maven(url = "https://www.jitpack.io")
 }
 
+
 dependencies {
-    val libraryVersion = "1.7.1"
+    val libraryVersion = "1.7.1.1"
     val pluginCompile by configurations
     pluginCompile("cf.wayzer:ScriptAgent:$libraryVersion")
     pluginCompile("cf.wayzer:LibraryManager:1.4.1")
