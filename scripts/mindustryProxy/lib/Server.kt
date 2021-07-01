@@ -3,6 +3,7 @@ package mindustryProxy.lib
 import cf.wayzer.scriptAgent.define.ScriptInfo
 import io.netty.bootstrap.Bootstrap
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.FixedRecvByteBufAllocator
@@ -14,8 +15,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.handler.timeout.ReadTimeoutHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
-import mindustryProxy.lib.protocol.TcpLengthHandler
-import mindustryProxy.lib.protocol.UDPChannel
+import mindustryProxy.lib.protocol.*
 import mindustryProxy.lib.protocol.handShake.HandShakeHandler
 import mindustryProxy.lib.protocol.handShake.MOTDHandler
 import java.util.concurrent.TimeUnit
@@ -37,7 +37,7 @@ object Server : CoroutineScope {
             .handler(object : ChannelInitializer<DatagramChannel>() {
                 override fun initChannel(ch: DatagramChannel) {
                     ch.pipeline().apply {
-                        addLast(UDPChannel)
+                        addLast(UDPMultiplex)
                         addLast(MOTDHandler)
 //                        addLast(ShakeHand) //in MOTDHandler
                     }
@@ -56,6 +56,22 @@ object Server : CoroutineScope {
             }).bind(port)
             .also { onClose += { it.channel().close() } }
         logger.info("Host on $port")
+    }
+
+    fun afterHandshake(channel: SocketChannel, multiplex: MultiplexHandler): Connection {
+        val bossHandler = BossHandler(channel)
+        channel.pipeline().apply {
+            addLast(multiplex)
+            addLast(object : ReadTimeoutHandler(30) {
+                override fun readTimedOut(ctx: ChannelHandlerContext) {
+                    if (channel.isActive)
+                        channel.close()
+                }
+            })
+            addLast(StreamableHandler())
+            addLast(bossHandler)
+        }
+        return bossHandler.con
     }
 
     fun stop() {

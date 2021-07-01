@@ -5,17 +5,15 @@ TCPChannel --> [TcpLength]
 [TcpLength] --> [ShakeTimeout]
 [ShakeTimeout] --> [ShakeHand]
 
-UDPServer --> [UDPChannelHandler]
-[UDPChannelHandler] --> [MOTDHandler]
+UDPServer --> [UDPMultiplex]
+[UDPMultiplex] --> [MOTDHandler]
 [MOTDHandler] --> [ShakeHand]
 
-[TcpLength] --> [CombinedHandler]
-[UDPChannelHandler] --> () UDPChannel
-UDPChannel --> [CombinedHandler]
+[TcpLength] --> [MultiplexHandler]
+[UDPMultiplex] --> [MultiplexHandler]
 
-[CombinedHandler] - [PacketHandler]
-[CombinedHandler] --> ()CombinedChannel
-CombinedChannel --> [ReadTimeout]
+[MultiplexHandler] - [PacketHandler]
+[MultiplexHandler] --> [ReadTimeout]
 [ReadTimeout] --> [StreamableHandler]
 [StreamableHandler] --> [BossHandler]
 @enduml

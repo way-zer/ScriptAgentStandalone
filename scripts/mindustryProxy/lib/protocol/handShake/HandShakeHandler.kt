@@ -12,9 +12,8 @@ import mindustryProxy.lib.Manager
 import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.Registry
-import mindustryProxy.lib.protocol.CombinedChannel
 import mindustryProxy.lib.protocol.TcpLengthHandler
-import mindustryProxy.lib.protocol.UDPChannel
+import mindustryProxy.lib.protocol.UDPMultiplex
 import java.net.InetSocketAddress
 import java.util.logging.Level
 import kotlin.random.Random
@@ -34,9 +33,8 @@ object HandShakeHandler : ChannelInboundHandlerAdapter() {
             pending[id] = ctx.channel() as SocketChannel
         }
         ctx.channel().attr(connectionId).set(id)
-        val packet = FrameworkMessage.RegisterTCP(id)
         val out = ctx.alloc().directBuffer().also {
-            Registry.encode(it, packet)
+            Registry.encode(it, FrameworkMessage.RegisterTCP(id))
         }
         ctx.writeAndFlush(out)
     }
@@ -67,20 +65,17 @@ object HandShakeHandler : ChannelInboundHandlerAdapter() {
         val tcp = synchronized(pending) {
             pending.remove(id) ?: return false
         }
-        val udp = UDPChannel.register(addr)
-        val combined = CombinedChannel(tcp, udp)
+        val multiplex = UDPMultiplex.SubHandler(addr)
 
         //Only Keep TcpLength
         while (true) {
             if (tcp.pipeline().last() is TcpLengthHandler) break
             tcp.pipeline().removeLast()
         }
-        tcp.pipeline().addLast(combined.handler)
-        udp.pipeline().addLast(combined.handler)
-
-        Manager.connected(combined.wrapper)
-        combined.wrapper.sendPacket(FrameworkMessage.RegisterUDP(id), false)
-        combined.wrapper.flush()
+        val con = Server.afterHandshake(tcp, multiplex)
+        Manager.connected(con)
+        con.sendPacket(FrameworkMessage.RegisterUDP(id), false)
+        con.flush()
         return true
     }
 }

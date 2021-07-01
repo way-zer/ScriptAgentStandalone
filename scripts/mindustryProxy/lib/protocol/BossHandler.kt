@@ -2,11 +2,12 @@ package mindustryProxy.lib.protocol
 
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.channel.socket.SocketChannel
 import mindustryProxy.lib.packet.Packet
+import java.net.InetAddress
 
-class BossHandler(var handler: Handler) : ChannelInboundHandlerAdapter() {
+class BossHandler(val channel: SocketChannel) : ChannelInboundHandlerAdapter() {
     class FailHandlePacket(packet: Packet, cause: Throwable) : Exception("Fail to handle $packet", cause)
-
     interface Handler {
         //only call once, useless for handler after init
         fun connected(con: Connection) = Unit
@@ -20,9 +21,39 @@ class BossHandler(var handler: Handler) : ChannelInboundHandlerAdapter() {
         }
     }
 
-    private lateinit var con: Connection
+    lateinit var handler: Handler
+    val con = object : Connection {
+        override val address: InetAddress
+            get() = channel.remoteAddress().address
+        override val isActive: Boolean
+            get() = channel.isActive
+        override val unsafe: SocketChannel
+            get() = channel
+
+        override fun sendPacket(packet: Packet, udp: Boolean) {
+            packet.udp = udp
+            channel.write(packet)
+        }
+
+        override fun setBossHandler(handler: Handler) {
+            this@BossHandler.handler = handler
+        }
+
+        override fun flush() {
+            channel.flush()
+        }
+
+        override fun close() {
+            if (channel.isActive)
+                channel.close()
+        }
+    }
+
+    override fun handlerAdded(ctx: ChannelHandlerContext) {
+        assert(ctx.channel() == channel)
+    }
+
     override fun channelActive(ctx: ChannelHandlerContext) {
-        con = (ctx.channel() as CombinedChannel).wrapper
         handler.connected(con)
     }
 

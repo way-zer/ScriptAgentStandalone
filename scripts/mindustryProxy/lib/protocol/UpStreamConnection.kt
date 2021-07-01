@@ -24,23 +24,22 @@ object UpStreamConnection {
     private val tcpBoot
         get() = Bootstrap().group(Server.group)
             .channel(NioSocketChannel::class.java)
-            .handler(TcpLengthHandler())
     private val udpBoot: Bootstrap
         get() = Bootstrap().group(Server.group)
             .channel(NioDatagramChannel::class.java)
             .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
-            .handler(UDPUnpack)
 
     suspend fun connect(server: InetSocketAddress): Connection {
-        val udp = udpBoot.connect(server).channel()
-        val tcp = tcpBoot.register().channel()
-        return suspendCancellableCoroutine {
-            val combined = CombinedChannel(tcp as SocketChannel, udp)
-            it.invokeOnCancellation { combined.close() }
-            udp.pipeline().addLast(combined.handler)
-            tcp.pipeline().addLast(combined.handler)
-            combined.setBossHandler(UpStreamHandShake(it))
-            tcp.connect(server)
+        val multiplexHandler = MultiplexHandler.wrapConnect(udpBoot, server)
+        return suspendCancellableCoroutine { co ->
+            val channel = tcpBoot.handler(object : ChannelInitializer<SocketChannel>() {
+                override fun initChannel(ch: SocketChannel) {
+                    ch.pipeline().addLast(TcpLengthHandler())
+                    val con = Server.afterHandshake(ch, multiplexHandler)
+                    con.setBossHandler(UpStreamHandShake(co))
+                }
+            }).connect(server).channel()
+            co.invokeOnCancellation { channel.close() }
         }
     }
 
