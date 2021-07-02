@@ -60,9 +60,12 @@ class ProxiedPlayer {
     fun close() {
         if (closed) return
         closed = true
-        server?.close()
-        clientCon.close()
-        Manager.disconnected(this)
+        try {
+            server?.close()
+            clientCon.close()
+        } finally {
+            Manager.disconnected(this)
+        }
     }
 
     private val clientHandler = object : BossHandler.Handler {
@@ -75,7 +78,10 @@ class ProxiedPlayer {
 
     private val serverHandler = object : BossHandler.Handler {
         override fun disconnected(con: Connection) {
-            if (con == server) close()
+            if (con == server) {
+                server = null
+                close()
+            }
         }
 
         override fun handle(con: Connection, packet: Packet) = handle(packet, true)

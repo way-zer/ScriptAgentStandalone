@@ -14,6 +14,10 @@ object UDPMultiplex : ChannelInboundHandlerAdapter() {
         this.ctx = ctx
     }
 
+    override fun handlerRemoved(ctx: ChannelHandlerContext) {
+        this.bound.clear()
+    }
+
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         msg as DatagramPacket
         val child = bound[msg.sender()] ?: return super.channelRead(ctx, msg)
