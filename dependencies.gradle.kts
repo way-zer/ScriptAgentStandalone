@@ -20,35 +20,34 @@ repositories {
 
 
 dependencies {
-    val libraryVersion = "1.7.1.1"
-    val pluginCompile by configurations
-    pluginCompile("cf.wayzer:ScriptAgent:$libraryVersion")
-    pluginCompile("cf.wayzer:LibraryManager:1.4.1")
-    pluginCompile(kotlin("stdlib-jdk8"))
+    val libraryVersion = "1.7.2.0"
+    val pluginImplementation by configurations
+    pluginImplementation("cf.wayzer:ScriptAgent:$libraryVersion")
+    pluginImplementation("cf.wayzer:LibraryManager:1.4.1")
 
 
-    val compile by configurations
-    compile(kotlin("script-runtime"))
-    compile("cf.wayzer:ScriptAgent:$libraryVersion")
+    val implementation by configurations
+    implementation(kotlin("script-runtime"))
+    implementation("cf.wayzer:ScriptAgent:$libraryVersion")
 
     //coreLibrary
-    compile("cf.wayzer:PlaceHoldLib:3.1")
-    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
-    compile("io.github.config4k:config4k:0.4.1")
+    implementation("cf.wayzer:PlaceHoldLib:3.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
+    implementation("io.github.config4k:config4k:0.4.1")
     //coreLib/DBApi
-    val exposedVersionn = "0.29.1"
-    compile("org.jetbrains.exposed:exposed-core:$exposedVersionn")
-    compile("org.jetbrains.exposed:exposed-dao:$exposedVersionn")
-    compile("org.jetbrains.exposed:exposed-java-time:$exposedVersionn")
+    val exposedVersion = "0.29.1"
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
     //coreStandalone
-    compile("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.2.1")
-    compile("org.jline:jline-terminal:3.19.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.2.1")
+    implementation("org.jline:jline-terminal:3.19.0")
 //    compile("org.jline:jline-terminal-jansi:3.19.0")
-    compile("org.jline:jline-reader:3.19.0")
+    implementation("org.jline:jline-reader:3.19.0")
     //ktor
-    compile("io.ktor:ktor-server-jetty:1.5.1")
-    compile("io.ktor:ktor-jackson:1.5.1")
+    implementation("io.ktor:ktor-server-jetty:1.5.1")
+    implementation("io.ktor:ktor-jackson:1.5.1")
     //mirai
-    compile("net.mamoe:mirai-core-api-jvm:2.5.0")
+    implementation("net.mamoe:mirai-core-api-jvm:2.5.0")
 }
