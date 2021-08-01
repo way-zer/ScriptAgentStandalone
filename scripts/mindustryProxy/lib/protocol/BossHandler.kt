@@ -18,6 +18,7 @@ class BossHandler(val channel: SocketChannel) : ChannelInboundHandlerAdapter() {
         fun readComplete()
         fun onError(con: Connection, e: Throwable) {
             e.printStackTrace()
+            con.close()
         }
     }
 

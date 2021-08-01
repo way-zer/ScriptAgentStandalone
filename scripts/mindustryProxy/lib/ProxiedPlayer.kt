@@ -48,7 +48,7 @@ class ProxiedPlayer {
         con.setBossHandler(serverHandler)
         if (con.isActive) {
             if (old != null)//Send WorldBegin
-                clientCon.sendPacket(UnknownPacket(88, Unpooled.EMPTY_BUFFER), false)
+                clientCon.sendPacket(UnknownPacket(90, Unpooled.copiedBuffer(byteArrayOf(0, 0, 0))), false)
 //                clientCon.sendPacket(InvokePacket(0, 0, Unpooled.EMPTY_BUFFER), false)
             con.sendPacket(connectPacket, false)
             con.flush()
@@ -62,6 +62,7 @@ class ProxiedPlayer {
         closed = true
         try {
             server?.close()
+            server = null
             clientCon.close()
         } finally {
             Manager.disconnected(this)
