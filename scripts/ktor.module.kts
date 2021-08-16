@@ -1,9 +1,9 @@
 @file:Depends("coreLibrary")
-@file:Import("io.ktor:ktor-server-jetty:1.5.1", mavenDepends = true)
-@file:Import("com.fasterxml.jackson.core:jackson-databind:2.10.2", mavenDependsSingle = true)
-@file:Import("com.fasterxml.jackson.core:jackson-core:2.10.2", mavenDependsSingle = true)
-@file:Import("com.fasterxml.jackson.core:jackson-annotations:2.10.2", mavenDependsSingle = true)
-@file:Import("io.ktor:ktor-jackson:1.5.1", mavenDepends = true)
+@file:Import("io.ktor:ktor-server-jetty:1.6.2", mavenDepends = true)
+@file:Import("com.fasterxml.jackson.core:jackson-databind:2.12.3", mavenDependsSingle = true)
+@file:Import("com.fasterxml.jackson.core:jackson-core:2.12.3", mavenDependsSingle = true)
+@file:Import("com.fasterxml.jackson.core:jackson-annotations:2.12.3", mavenDependsSingle = true)
+@file:Import("io.ktor:ktor-jackson:1.6.2", mavenDepends = true)
 @file:Import("javax.servlet:javax.servlet-api:3.1.0", mavenDependsSingle = true)
 @file:Import("ktor.lib.*", defaultImport = true)
 @file:Import("io.ktor.application.*", defaultImport = true)
@@ -17,16 +17,11 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
-import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
 import io.ktor.jackson.*
-import io.ktor.response.*
-import io.ktor.routing.*
 import io.ktor.server.engine.*
 import io.ktor.server.jetty.*
-import ktor.lib.RouteHelper
-import ktor.lib.webInit
 import org.slf4j.event.Level
 
 val port by config.key(9090, "Web 端口")
