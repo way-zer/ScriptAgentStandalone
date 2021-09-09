@@ -25,7 +25,7 @@ object Manager {
             val event = PlayerConnectEvent(player, false).emit()
             if (event.cancelled) player.close()
             else players.add(player)
-        }
+        } else player.close()
     }
 
     fun connected(player: ProxiedPlayer) {

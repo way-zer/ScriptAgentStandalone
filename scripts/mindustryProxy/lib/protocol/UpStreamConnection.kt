@@ -6,6 +6,7 @@ import io.netty.channel.*
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.ReferenceCountUtil
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -89,6 +90,12 @@ object UpStreamConnection {
             .handler(object : ChannelInitializer<Channel>() {
                 override fun initChannel(ch: Channel) {
                     ch.pipeline().addLast(UDPUnpack)
+                    ch.pipeline().addLast(object : ReadTimeoutHandler(30) {
+                        override fun readTimedOut(ctx: ChannelHandlerContext) {
+                            if (ctx.channel().isActive)
+                                ctx.pipeline().close()
+                        }
+                    })
                     ch.pipeline().addLast(object : ChannelInboundHandlerAdapter() {
                         override fun channelActive(ctx: ChannelHandlerContext) {
                             val out = ctx.alloc().buffer()
