@@ -1,12 +1,13 @@
 package ktor.lib
 
+import cf.wayzer.scriptAgent.Event
 import cf.wayzer.scriptAgent.define.ISubScript
 import cf.wayzer.scriptAgent.events.ScriptDisableEvent
 import cf.wayzer.scriptAgent.events.ScriptEnableEvent
 import cf.wayzer.scriptAgent.getContextScript
 import cf.wayzer.scriptAgent.listenTo
 import cf.wayzer.scriptAgent.util.DSLBuilder
-import coreLibrary.lib.util.Provider
+import coreLibrary.lib.util.ServiceRegistry
 import io.ktor.http.*
 import io.ktor.routing.*
 import io.ktor.util.pipeline.*
@@ -20,7 +21,7 @@ object RouteHelper {
 
     private val routes_key = DSLBuilder.DataKeyWithDefault("ktor_routes") { mutableSetOf<RouteInfo>() }
     val ISubScript.routes by routes_key
-    val root = Provider<Route>()
+    val root = ServiceRegistry<Route>()
 
     private fun ISubScript.initRoute(root: Route) {
         val routes = routes_key.run { get() } ?: return
@@ -36,8 +37,8 @@ object RouteHelper {
 
     init {
         RouteHelper::class.java.getContextScript().apply {
-            listenTo<ScriptEnableEvent>(4) {
-                root.listenWithAutoCancel(script) {
+            listenTo<ScriptEnableEvent>(Event.Priority.After) {
+                root.subscribe(script) {
                     script.initRoute(it)
                 }
             }

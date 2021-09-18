@@ -56,7 +56,7 @@ fun restart() {
             get("/testEnable") {
                 call.respond(enabled.toString())
             }
-            RouteHelper.root.set(this)
+            RouteHelper.root.provide(this@Ktor_module, this)
         }
         ScriptManager.allScripts.values.forEach { s ->
             s.inst?.webInit?.forEach { it.invoke(this);true }
