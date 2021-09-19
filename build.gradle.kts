@@ -73,5 +73,8 @@ tasks {
         manifest {
             attributes("Main-Class" to "cf.wayzer.scriptAgent.LoaderKt")
         }
+        afterEvaluate {
+            println(archiveFile.get())
+        }
     }
 }

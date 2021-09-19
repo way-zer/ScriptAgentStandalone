@@ -1,6 +1,7 @@
 package coreStandalone.lib
 
 import cf.wayzer.scriptAgent.define.ISubScript
+import cf.wayzer.scriptAgent.define.ScriptDsl
 import coreLibrary.lib.ColorApi
 import coreLibrary.lib.CommandContext
 import coreLibrary.lib.CommandInfo
@@ -49,6 +50,7 @@ object RootCommands : Commands() {
     }
 }
 
+@ScriptDsl
 fun ISubScript.command(
     name: String,
     description: String,

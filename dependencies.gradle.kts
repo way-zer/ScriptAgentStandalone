@@ -20,7 +20,7 @@ repositories {
 
 
 dependencies {
-    val libraryVersion = "1.7.2.0"
+    val libraryVersion = "1.7.5"
     val pluginImplementation by configurations
     pluginImplementation("cf.wayzer:ScriptAgent:$libraryVersion")
     pluginImplementation("cf.wayzer:LibraryManager:1.4.1")
@@ -35,7 +35,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.2")
     implementation("io.github.config4k:config4k:0.4.1")
     //coreLib/DBApi
-    val exposedVersion = "0.29.1"
+    val exposedVersion = "0.34.2"
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
@@ -46,8 +46,8 @@ dependencies {
 //    compile("org.jline:jline-terminal-jansi:3.19.0")
     implementation("org.jline:jline-reader:3.19.0")
     //ktor
-    implementation("io.ktor:ktor-server-jetty:1.5.1")
-    implementation("io.ktor:ktor-jackson:1.5.1")
+    implementation("io.ktor:ktor-server-jetty:1.6.2")
+    implementation("io.ktor:ktor-jackson:1.6.2")
     //mirai
     implementation("net.mamoe:mirai-core-api-jvm:2.5.0")
     //mindustryProxy
