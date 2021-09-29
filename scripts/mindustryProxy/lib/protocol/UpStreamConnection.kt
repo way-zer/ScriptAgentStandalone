@@ -28,7 +28,6 @@ object UpStreamConnection {
     private val udpBoot: Bootstrap
         get() = Bootstrap().group(Server.group)
             .channel(NioDatagramChannel::class.java)
-            .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
 
     suspend fun connect(server: InetSocketAddress): Connection {
         val multiplexHandler = MultiplexHandler.wrapConnect(udpBoot, server)
@@ -99,15 +98,22 @@ object UpStreamConnection {
                     ch.pipeline().addLast(object : ChannelInboundHandlerAdapter() {
                         override fun channelActive(ctx: ChannelHandlerContext) {
                             val out = ctx.alloc().buffer()
-                            Registry.encode(out, FrameworkMessage.DiscoverHost)
+                            try {
+                                Registry.encode(out, FrameworkMessage.DiscoverHost)
+                            } finally {
+                                out.release()
+                            }
+
                             ctx.writeAndFlush(out)
                         }
 
                         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-                            msg as ByteBuf
-                            result = PingInfo.decode(msg)
-                            msg.release()
-                            ctx.close()
+                            result = try {
+                                PingInfo.decode(msg as ByteBuf)
+                            } finally {
+                                ReferenceCountUtil.release(msg)
+                                ctx.close()
+                            }
                         }
 
                         override fun channelInactive(ctx: ChannelHandlerContext) {

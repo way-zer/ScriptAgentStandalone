@@ -18,19 +18,26 @@ abstract class MultiplexHandler : ChannelDuplexHandler() {
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        val packet = Registry.decode(msg as ByteBuf)
-        msg.release()
+        val packet = try {
+            Registry.decode(msg as ByteBuf)
+        } finally {
+            ReferenceCountUtil.release(msg)
+        }
         ctx.fireChannelRead(packet)
     }
 
-    override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
-        val packet = msg as Packet
+    override fun write(ctx: ChannelHandlerContext, packet: Any, promise: ChannelPromise) {
         val out = ctx.alloc().directBuffer().also {
-            Registry.encode(it, packet)
+            try {
+                Registry.encode(it, packet as Packet)
+            } finally {
+                ReferenceCountUtil.release(packet)
+                it.release()
+            }
         }
-        ReferenceCountUtil.release(msg)
+
         checkRef(out)
-        if (packet.udp) {
+        if ((packet as Packet).udp) {
             try {
                 writeUdp(out)
                 promise.setSuccess()
@@ -42,8 +49,11 @@ abstract class MultiplexHandler : ChannelDuplexHandler() {
 
     abstract fun writeUdp(msg: ByteBuf)
     fun onUdpRead(msg: ByteBuf) {
-        val packet = Registry.decode(msg)
-        msg.release()
+        val packet = try {
+            Registry.decode(msg)
+        } finally {
+            msg.release()
+        }
         packet.udp = true
         ctx.fireChannelRead(packet)
     }

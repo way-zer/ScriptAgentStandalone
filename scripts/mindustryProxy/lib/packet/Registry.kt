@@ -65,13 +65,12 @@ object Registry {
         idMap[factory.packetId] = factory
     }
 
+    @Throws(Exception::class)
     fun decodeWithId(packetId: Int, buf: ByteBuf): Packet {
         if (packetId == FrameworkMessage.packetId)
             return FrameworkMessage.decode(buf)
-        if (packetId == ConnectPacket.packetId && buf.getInt(buf.readerIndex()) in 105..126) {
-            buf.release()
+        if (packetId == ConnectPacket.packetId && buf.getInt(buf.readerIndex()) in 105..126)
             throw UnsupportedOperationException("Not Support 126")
-        }
         return if (packetId in idMap) {
             val length = buf.readShort().toInt()
             val compression = buf.readBoolean()
@@ -93,6 +92,7 @@ object Registry {
         }
     }
 
+    @Throws(Exception::class)
     fun decode(buf: ByteBuf): Packet {
         try {
             return decodeWithId(buf.readByte().toInt(), buf)
@@ -101,7 +101,6 @@ object Registry {
         } catch (e: Exception) {
             buf.readerIndex(0)
             Server.logger.warning("Fail to decode packet: \n${ByteBufUtil.hexDump(buf)}")
-            buf.release()
             throw e
         }
     }
@@ -115,14 +114,22 @@ object Registry {
         return FrameworkMessage.decode(buf)
     }
 
+    /**
+     * encode [obj] into [buf]
+     * retain [buf] when success, should use finally release [buf]
+     * this does not release [obj]
+     */
     fun encode(buf: ByteBuf, obj: Packet) {
+        //TODO 增加压缩支持
         if (obj is FrameworkMessage) {
             buf.writeByte(FrameworkMessage.packetId!!)
             FrameworkMessage.encode(buf, obj)
+            buf.retain()
             return
         }
         if (obj is UnknownPacket) {
             obj.factory.encodeUnsafe(buf, obj)
+            buf.retain()
             return
         }
         val factory = obj.factory
@@ -138,6 +145,7 @@ object Registry {
             writerIndex(0)
             writeShort(len)
         }
+        buf.retain()
     }
 
     init {

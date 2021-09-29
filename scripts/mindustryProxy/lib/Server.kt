@@ -33,7 +33,6 @@ object Server : CoroutineScope {
         if (group.isTerminated)
             group = NioEventLoopGroup(16)
         Bootstrap().group(group).channel(NioDatagramChannel::class.java)
-            .option(ChannelOption.RCVBUF_ALLOCATOR, FixedRecvByteBufAllocator(8192))
             .handler(object : ChannelInitializer<DatagramChannel>() {
                 override fun initChannel(ch: DatagramChannel) {
                     ch.pipeline().apply {

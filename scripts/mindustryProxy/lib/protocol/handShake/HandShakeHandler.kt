@@ -34,7 +34,11 @@ object HandShakeHandler : ChannelInboundHandlerAdapter() {
         }
         ctx.channel().attr(connectionId).set(id)
         val out = ctx.alloc().directBuffer().also {
-            Registry.encode(it, FrameworkMessage.RegisterTCP(id))
+            try {
+                Registry.encode(it, FrameworkMessage.RegisterTCP(id))
+            } finally {
+                it.release()
+            }
         }
         ctx.writeAndFlush(out)
     }

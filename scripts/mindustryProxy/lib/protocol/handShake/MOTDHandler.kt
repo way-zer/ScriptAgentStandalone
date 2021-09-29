@@ -17,7 +17,12 @@ object MOTDHandler : SimpleChannelInboundHandler<DatagramPacket>() {
             is FrameworkMessage.DiscoverHost -> {
                 Server.launch {
                     val resp = ctx.alloc().directBuffer()
-                    PingInfo.encode(resp, Manager.getPingInfo(sender.address))
+                    try {
+                        PingInfo.encode(resp, Manager.getPingInfo(sender.address))
+                    } catch (e: Throwable) {
+                        resp.release()
+                        throw e
+                    }
                     ctx.writeAndFlush(DatagramPacket(resp, sender))
                 }
             }

@@ -49,4 +49,9 @@ class StreamableHandler : MessageToMessageCodec<StreamChunk, Streamable>() {
             out.add(StreamChunk(cid, stream.readSlice(512)))
         out.add(StreamChunk(cid, stream.readRetainedSlice(stream.readableBytes())))
     }
+
+    override fun channelInactive(ctx: ChannelHandlerContext?) {
+        streamableMap.values.forEach { it.release() }
+        super.channelInactive(ctx)
+    }
 }
