@@ -4,6 +4,7 @@
 @file:Import("mindustryProxy.lib.*", defaultImport = true)
 
 import io.netty.util.ResourceLeakDetector
+import mindustryProxy.lib.packet.PacketIdMapper
 import java.net.InetSocketAddress
 
 val port by config.key(6567, "监听端口", "重启生效")
@@ -19,8 +20,16 @@ generateHelper()
 
 onEnable {
     Server.logger = logger
+    PacketIdMapper//load
     Server.start(port)
 }
 onDisable {
     Server.stop()
+}
+
+command("reloadId", "重载Packet Id文件") {
+    permission = "mindustryProxy.reloadId"
+    body {
+        PacketIdMapper.load()
+    }
 }

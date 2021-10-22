@@ -1,12 +1,14 @@
 package mindustryProxy
 
 import io.netty.buffer.ByteBuf
+import mindustryProxy.lib.Manager
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.Packet
+import mindustryProxy.lib.packet.PacketIdMapper
 import mindustryProxy.lib.packet.Registry
 
 class SendChatMessageCallPacket(val message: String) : Packet() {
-    companion object : Factory<SendChatMessageCallPacket>(52) {
+    companion object : Factory<SendChatMessageCallPacket>(PacketIdMapper["SendChatMessageCallPacket"]) {
         override fun decode(buf: ByteBuf): SendChatMessageCallPacket {
             return SendChatMessageCallPacket(buf.readStringB())
         }
@@ -19,16 +21,14 @@ class SendChatMessageCallPacket(val message: String) : Packet() {
     override val factory: Factory<out Packet> get() = Companion
 }
 
-class SendMessageCallPacket(val message: String, val sender: String, val senderId: Int = -1) : Packet() {
-    companion object : Factory<SendMessageCallPacket>(54) {
+class SendMessageCallPacket(val message: String) : Packet() {
+    companion object : Factory<SendMessageCallPacket>(PacketIdMapper["SendMessageCallPacket"]) {
         override fun decode(buf: ByteBuf): SendMessageCallPacket {
-            return SendMessageCallPacket(buf.readStringB(), buf.readStringB(), buf.readInt())
+            return SendMessageCallPacket(buf.readStringB())
         }
 
         override fun encode(buf: ByteBuf, obj: SendMessageCallPacket) {
             buf.writeStringB(obj.message)
-            buf.writeStringB(obj.sender)
-            buf.writeInt(obj.senderId)
         }
     }
 
@@ -40,7 +40,7 @@ Registry.register(SendMessageCallPacket)
 
 fun broadcast(from: String, text: String) {
     logger.info("[$from] $text")
-    val packet = SendMessageCallPacket(text, from)
+    val packet = SendMessageCallPacket("[coral][[$from[coral]][white]: $text")
     Manager.players.forEach {
         it.clientCon.sendPacket(packet, false)
         it.clientCon.flush()
@@ -63,6 +63,6 @@ command("broadcast", "广播消息") {
     usage = "<msg>"
     body {
         val msg = arg.joinToString(" ")
-        broadcast("PROXY", msg)
+        broadcast("[red]PROXY", msg)
     }
 }

@@ -6,6 +6,7 @@ import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.ConnectPacket
 import mindustryProxy.lib.packet.Packet
+import mindustryProxy.lib.packet.PacketIdMapper
 import mindustryProxy.lib.packet.UnknownPacket
 import mindustryProxy.lib.protocol.BossHandler
 import mindustryProxy.lib.protocol.Connection
@@ -47,8 +48,11 @@ class ProxiedPlayer {
 
         con.setBossHandler(serverHandler)
         if (con.isActive) {
-            if (old != null)//Send WorldBegin
-                clientCon.sendPacket(UnknownPacket(90, Unpooled.copiedBuffer(byteArrayOf(0, 0, 0))), false)
+            if (old != null) {//Send WorldBegin
+                PacketIdMapper.getIdByName("WorldDataBeginCallPacket")?.let {
+                    clientCon.sendPacket(UnknownPacket(it, Unpooled.copiedBuffer(byteArrayOf(0, 0, 0))), false)
+                }
+            }
 //                clientCon.sendPacket(InvokePacket(0, 0, Unpooled.EMPTY_BUFFER), false)
             con.sendPacket(connectPacket, false)
             con.flush()

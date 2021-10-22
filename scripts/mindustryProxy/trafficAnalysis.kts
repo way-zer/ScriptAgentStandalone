@@ -1,6 +1,7 @@
 package mindustryProxy
 
 import mindustryProxy.lib.event.PlayerPacketEvent
+import mindustryProxy.lib.packet.PacketIdMapper
 import mindustryProxy.lib.packet.StreamChunk
 import mindustryProxy.lib.packet.UnknownPacket
 
@@ -26,15 +27,9 @@ var data = emptyArray<Data>()
 var beginTime = System.currentTimeMillis()
 
 onEnable {
-    val list = sourceFile.resolveSibling("res/remoteId.csv").useLines { lines ->
-        lines.associate {
-            val sp = it.split("\t")
-            sp[0].toInt() to sp[1]
-        }
-    }
-    if (list.isEmpty()) return@onEnable
-    data = Array(list.keys.maxOrNull()!! + 1) {
-        Data(it, list[it] ?: "Unknown")
+    val range = PacketIdMapper.idIndices
+    data = Array(range.last + 1) {
+        Data(it, PacketIdMapper[it])
     }
 }
 
