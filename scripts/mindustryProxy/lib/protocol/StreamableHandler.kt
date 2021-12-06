@@ -1,7 +1,9 @@
 package mindustryProxy.lib.protocol
 
+import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToMessageCodec
+import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.packet.Registry
 import mindustryProxy.lib.packet.StreamBegin
 import mindustryProxy.lib.packet.StreamChunk
@@ -22,7 +24,11 @@ class StreamableHandler : MessageToMessageCodec<StreamChunk, Streamable>() {
         }
         if (result) {
             info!!.built?.let {
-                out.add(Registry.decodeWithId(info!!.type, it.stream))
+                try {
+                    out.add(Registry.decodeWithId(info!!.type, it.stream))
+                } finally {
+                    it.release()
+                }
             }
             return
         }
