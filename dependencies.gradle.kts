@@ -49,5 +49,5 @@ dependencies {
     implementation("io.ktor:ktor-server-jetty:1.6.2")
     implementation("io.ktor:ktor-jackson:1.6.2")
     //mirai
-    implementation("net.mamoe:mirai-core-api-jvm:2.5.0")
+    implementation("net.mamoe:mirai-core-api-jvm:2.8.1")
 }
