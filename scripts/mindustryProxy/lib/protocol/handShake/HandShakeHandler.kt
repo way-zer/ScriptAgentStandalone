@@ -12,7 +12,6 @@ import mindustryProxy.lib.Manager
 import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.Registry
-import mindustryProxy.lib.protocol.TcpLengthHandler
 import mindustryProxy.lib.protocol.UDPMultiplex
 import java.net.InetSocketAddress
 import java.util.logging.Level
@@ -33,13 +32,7 @@ object HandShakeHandler : ChannelInboundHandlerAdapter() {
             pending[id] = ctx.channel() as SocketChannel
         }
         ctx.channel().attr(connectionId).set(id)
-        val out = ctx.alloc().directBuffer().also {
-            try {
-                Registry.encode(it, FrameworkMessage.RegisterTCP(id))
-            } finally {
-                it.release()
-            }
-        }
+        val out = Registry.encode(ctx.alloc().directBuffer(), FrameworkMessage.RegisterTCP(id))
         ctx.writeAndFlush(out)
     }
 
@@ -57,26 +50,19 @@ object HandShakeHandler : ChannelInboundHandlerAdapter() {
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         super.channelInactive(ctx)
-        ctx.channel().attr(connectionId).get()?.let {
-            synchronized(pending) {
-                pending.remove(it)
-            }
-        }
+        ctx.channel().attr(connectionId).get()
+            ?.let { pending.remove(it) }
+    }
+
+    fun closeAll() {
+        pending.values.forEach { it.close() }
     }
 
     //For UDP
     fun registerUDP(id: Int, addr: InetSocketAddress): Boolean {
-        val tcp = synchronized(pending) {
-            pending.remove(id) ?: return false
-        }
+        val tcp = pending.remove(id) ?: return false
         val multiplex = UDPMultiplex.SubHandler(addr)
-
-        //Only Keep TcpLength
-        while (true) {
-            if (tcp.pipeline().last() is TcpLengthHandler) break
-            tcp.pipeline().removeLast()
-        }
-        val con = Server.afterHandshake(tcp, multiplex)
+        val con = Server.afterHandshake(tcp, multiplex, isUpstream = false)
         Manager.connected(con)
         con.sendPacket(FrameworkMessage.RegisterUDP(id), false)
         con.flush()

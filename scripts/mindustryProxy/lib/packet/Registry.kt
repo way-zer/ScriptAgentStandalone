@@ -1,6 +1,10 @@
 package mindustryProxy.lib.packet
 
-import io.netty.buffer.*
+import io.netty.buffer.ByteBuf
+import io.netty.buffer.ByteBufInputStream
+import io.netty.buffer.ByteBufOutputStream
+import io.netty.buffer.ByteBufUtil
+import io.netty.util.ReferenceCountUtil
 import mindustryProxy.lib.Server
 import net.jpountz.lz4.LZ4Compressor
 import net.jpountz.lz4.LZ4Factory
@@ -11,8 +15,8 @@ abstract class Packet {
     abstract val factory: Factory<out Packet>
 
     abstract class Factory<T : Packet>(val packetId: Int?) {
-        fun ByteBuf.toByteArray(): ByteArray {
-            val out = ByteArray(readableBytes())
+        fun ByteBuf.readByteArray(length: Int = readableBytes()): ByteArray {
+            val out = ByteArray(length)
             readBytes(out)
             return out
         }
@@ -38,16 +42,16 @@ abstract class Packet {
             else readSlice(length).toString(Charsets.UTF_8)
         }
 
-        fun ByteBuf.writeString(str: String, byte: Boolean = false): ByteBuf {
+        fun ByteBuf.writeString(str: String, byte: Boolean = false) {
             val bs = str.toByteArray()
             if (byte) writeByte(bs.size)
             else writeShort(bs.size)
             writeBytes(bs)
-            return this
         }
 
+        /**note: No Need to do [ByteBuf.release]*/
         abstract fun decode(buf: ByteBuf): T
-        abstract fun encode(buf: ByteBuf, obj: T)
+        abstract fun encode(buf: ByteBuf, obj: T): ByteBuf
 
         @Suppress("UNCHECKED_CAST")
         fun encodeUnsafe(buf: ByteBuf, obj: Packet) = encode(buf, obj as T)
@@ -68,14 +72,20 @@ object Registry {
     @Throws(Exception::class)
     fun decodeWithId(packetId: Int, buf: ByteBuf): Packet {
         if (packetId == FrameworkMessage.packetId)
-            return FrameworkMessage.decode(buf)
-        if (packetId == ConnectPacket.packetId && buf.getInt(buf.readerIndex()) in 105..126)
+            try {
+                return FrameworkMessage.decode(buf)
+            } finally {
+                buf.release()
+            }
+        if (packetId == ConnectPacket.packetId && buf.getInt(buf.readerIndex()) in 105..126) {
+            buf.release()
             throw UnsupportedOperationException("Not Support 126")
-        return if (packetId in idMap) {
+        }
+        return idMap[packetId]?.let { factory ->
             val length = buf.readShort().toInt()
             val compression = buf.readBoolean()
-            val decompressed = if (!compression) buf.readRetainedSlice(length)
-            else Unpooled.buffer(length, length).also {
+            val decompressed = if (!compression) buf.readSlice(length)
+            else buf.alloc().directBuffer(length, length).also {
                 decompressor.decompress(
                     buf.nioBuffer(),
                     it.nioBuffer(it.writerIndex(), length)
@@ -83,17 +93,17 @@ object Registry {
                 it.writerIndex(it.writerIndex() + length)
             }
             try {
-                idMap[packetId]!!.decode(decompressed)
+                factory.decode(decompressed)
             } finally {
                 decompressed.release()
             }
-        } else {
-            UnknownPacket(packetId, buf.retainedSlice())
-        }
+        } ?: UnknownPacket(packetId, buf.slice())
     }
 
     @Throws(Exception::class)
     fun decode(buf: ByteBuf): Packet {
+        buf.touch("Registry.decode")
+        buf.retain()//for hexDump
         try {
             return decodeWithId(buf.readByte().toInt(), buf)
         } catch (e: UnsupportedOperationException) {
@@ -102,50 +112,88 @@ object Registry {
             buf.readerIndex(0)
             Server.logger.warning("Fail to decode packet: \n${ByteBufUtil.hexDump(buf)}")
             throw e
+        } finally {
+            buf.release()
         }
     }
 
     fun decodeOnlyFrameworkMessage(buf: ByteBuf): FrameworkMessage? {
-        val id = buf.readByte().toInt()
-        if (id != FrameworkMessage.packetId) {
-            buf.readerIndex(buf.readerIndex() - 1)
-            return null
+        try {
+            val id = buf.readByte().toInt()
+            if (id != FrameworkMessage.packetId) {
+                buf.readerIndex(buf.readerIndex() - 1)
+                return null
+            }
+            return FrameworkMessage.decode(buf)
+        } finally {
+            buf.release()
         }
-        return FrameworkMessage.decode(buf)
+    }
+
+    /**
+     * Unsafe: no release for [obj]
+     * @see [encode]
+     */
+    private fun encodeUnsafe(buf: ByteBuf, obj: Packet): ByteBuf {
+        when (obj) {
+            is FrameworkMessage -> {
+                buf.writeByte(FrameworkMessage.packetId!!)
+                return FrameworkMessage.encode(buf, obj)
+            }
+
+            is UnknownPacket -> {
+                return obj.factory.encodeUnsafe(buf, obj)
+            }
+            else -> {
+                val factory = obj.factory
+                factory.packetId?.let(buf::writeByte)
+                //header: length and compressed, replace later
+                val lengthIndex = buf.writerIndex()
+                buf.writeShort(0)//length, replace later
+                buf.writeBoolean(false)
+                val data = factory.encodeUnsafe(buf, obj)
+                val rawLen = data.writerIndex() - lengthIndex - 3
+                var compress = obj !is StreamChunk && rawLen > 100
+                if (compress) {
+                    data.writerIndex(lengthIndex + 3)
+                    val dstBuf = data.alloc().heapBuffer(compressor.maxCompressedLength(rawLen))
+                    try {
+                        val src = data.nioBuffer(data.writerIndex(), rawLen)
+                        val dst = dstBuf.writerIndex(compressor.maxCompressedLength(rawLen)).nioBuffer()
+                        val cpLen = compressor.compress(
+                            src, src.position(), src.remaining(),
+                            dst, dst.position(), dst.remaining()
+                        )
+                        if (cpLen < rawLen - 10)
+                            data.writeBytes(dstBuf, cpLen)
+                        else
+                            compress = false
+                    } finally {
+                        dstBuf.release()
+                    }
+                }
+                return data.also {
+                    it.slice(lengthIndex, 3).apply {
+                        writerIndex(0)
+                        writeShort(rawLen)
+                        writeBoolean(compress)
+                    }
+                }
+            }
+        }
     }
 
     /**
      * encode [obj] into [buf]
-     * retain [buf] when success, should use finally release [buf]
-     * this does not release [obj]
      */
-    fun encode(buf: ByteBuf, obj: Packet) {
-        //TODO 增加压缩支持
-        if (obj is FrameworkMessage) {
-            buf.writeByte(FrameworkMessage.packetId!!)
-            FrameworkMessage.encode(buf, obj)
-            buf.retain()
-            return
-        }
-        if (obj is UnknownPacket) {
-            obj.factory.encodeUnsafe(buf, obj)
-            buf.retain()
-            return
-        }
-        val factory = obj.factory
-        factory.packetId?.let(buf::writeByte)
-
-        val begin = buf.writerIndex()
-        buf.writeShort(0)//to replace
-        buf.writeBoolean(false) //TODO handle compressed Packet
-        factory.encodeUnsafe(buf, obj)
-        //replace length short
-        val len = buf.writerIndex() - begin - 3
-        buf.slice(begin, 2).apply {
-            writerIndex(0)
-            writeShort(len)
-        }
-        buf.retain()
+    fun encode(buf: ByteBuf, obj: Packet) = try {
+        buf.touch("Registry.encode")
+        encodeUnsafe(buf, obj)
+    } catch (e: Throwable) {
+        buf.release()
+        throw e
+    } finally {
+        ReferenceCountUtil.release(obj)
     }
 
     init {

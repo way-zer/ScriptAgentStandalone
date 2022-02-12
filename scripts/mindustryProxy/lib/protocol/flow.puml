@@ -3,11 +3,11 @@
 
 TCPChannel --> [TcpLength]
 [TcpLength] --> [ShakeTimeout]
-[ShakeTimeout] --> [ShakeHand]
+[ShakeTimeout] --> [HandShake]
 
 UDPServer --> [UDPMultiplex]
 [UDPMultiplex] --> [MOTDHandler]
-[MOTDHandler] --> [ShakeHand]
+[MOTDHandler] --> [HandShake]
 
 [TcpLength] --> [MultiplexHandler]
 [UDPMultiplex] --> [MultiplexHandler]

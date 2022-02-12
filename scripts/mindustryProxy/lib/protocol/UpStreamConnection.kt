@@ -3,6 +3,9 @@ package mindustryProxy.lib.protocol
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.channel.*
+import io.netty.channel.epoll.Epoll
+import io.netty.channel.epoll.EpollDatagramChannel
+import io.netty.channel.epoll.EpollSocketChannel
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -24,10 +27,10 @@ import kotlin.coroutines.resumeWithException
 object UpStreamConnection {
     private val tcpBoot
         get() = Bootstrap().group(Server.group)
-            .channel(NioSocketChannel::class.java)
+            .channel(if (Epoll.isAvailable()) EpollSocketChannel::class.java else NioSocketChannel::class.java)
     private val udpBoot: Bootstrap
         get() = Bootstrap().group(Server.group)
-            .channel(NioDatagramChannel::class.java)
+            .channel(if (Epoll.isAvailable()) EpollDatagramChannel::class.java else NioDatagramChannel::class.java)
 
     suspend fun connect(server: InetSocketAddress): Connection {
         val multiplexHandler = MultiplexHandler.wrapConnect(udpBoot, server)
@@ -35,7 +38,7 @@ object UpStreamConnection {
             val channel = tcpBoot.handler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
                     ch.pipeline().addLast(TcpLengthHandler())
-                    val con = Server.afterHandshake(ch, multiplexHandler)
+                    val con = Server.afterHandshake(ch, multiplexHandler, isUpstream = true)
                     con.setBossHandler(UpStreamHandShake(co))
                 }
             }).connect(server).channel()
@@ -52,7 +55,6 @@ object UpStreamConnection {
             when (packet) {
                 is FrameworkMessage.RegisterTCP -> {
                     con.sendPacket(FrameworkMessage.RegisterUDP(packet.id), udp = true)
-                    con.flush()
                 }
                 is FrameworkMessage.RegisterUDP -> {
                     if (!finish.isCompleted)
@@ -85,7 +87,7 @@ object UpStreamConnection {
         var result: PingInfo? = null
         var cause: Throwable? = null
         Bootstrap().group(Server.group)
-            .channel(NioDatagramChannel::class.java)
+            .channel(if (Epoll.isAvailable()) EpollDatagramChannel::class.java else NioDatagramChannel::class.java)
             .handler(object : ChannelInitializer<Channel>() {
                 override fun initChannel(ch: Channel) {
                     ch.pipeline().addLast(UDPUnpack)
@@ -97,13 +99,7 @@ object UpStreamConnection {
                     })
                     ch.pipeline().addLast(object : ChannelInboundHandlerAdapter() {
                         override fun channelActive(ctx: ChannelHandlerContext) {
-                            val out = ctx.alloc().buffer()
-                            try {
-                                Registry.encode(out, FrameworkMessage.DiscoverHost)
-                            } finally {
-                                out.release()
-                            }
-
+                            val out = Registry.encode(ctx.alloc().directBuffer(), FrameworkMessage.DiscoverHost)
                             ctx.writeAndFlush(out)
                         }
 

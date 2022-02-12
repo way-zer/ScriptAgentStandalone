@@ -4,7 +4,6 @@ import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.channel.*
 import io.netty.channel.socket.DatagramChannel
-import io.netty.util.ReferenceCountUtil
 import kotlinx.coroutines.suspendCancellableCoroutine
 import mindustryProxy.lib.packet.Packet
 import mindustryProxy.lib.packet.Registry
@@ -18,26 +17,13 @@ abstract class MultiplexHandler : ChannelDuplexHandler() {
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        val packet = try {
-            Registry.decode(msg as ByteBuf)
-        } finally {
-            ReferenceCountUtil.release(msg)
-        }
+        val packet = Registry.decode(msg as ByteBuf)
         ctx.fireChannelRead(packet)
     }
 
     override fun write(ctx: ChannelHandlerContext, packet: Any, promise: ChannelPromise) {
-        val out = ctx.alloc().directBuffer().also {
-            try {
-                Registry.encode(it, packet as Packet)
-            } finally {
-                ReferenceCountUtil.release(packet)
-                it.release()
-            }
-        }
-
-        checkRef(out)
-        if ((packet as Packet).udp) {
+        val out = Registry.encode(ctx.alloc().directBuffer(), packet as Packet)
+        if (packet.udp) {
             try {
                 writeUdp(out)
                 promise.setSuccess()
@@ -49,11 +35,7 @@ abstract class MultiplexHandler : ChannelDuplexHandler() {
 
     abstract fun writeUdp(msg: ByteBuf)
     fun onUdpRead(msg: ByteBuf) {
-        val packet = try {
-            Registry.decode(msg)
-        } finally {
-            msg.release()
-        }
+        val packet = Registry.decode(msg)
         packet.udp = true
         ctx.fireChannelRead(packet)
     }

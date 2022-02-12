@@ -9,7 +9,6 @@ import mindustryProxy.lib.event.PlayerServerEvent
 import mindustryProxy.lib.packet.PingInfo
 import mindustryProxy.lib.protocol.Connection
 import mindustryProxy.lib.protocol.UpStreamConnection
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.logging.Level
 
@@ -35,20 +34,24 @@ object Manager {
         else connectServer(player)
     }
 
-    fun getPingInfo(address: InetAddress): PingInfo {
+    fun getPingInfo(address: InetSocketAddress): PingInfo? {
         Server.logger.info("Ping from $address")
         val default = PingInfo(
             "MindustryProxy", "None", 1, 1, 126, "proxy",
             PingInfo.GameMode.Editor, -1, "Powered by WayZer", "custom"
         )
         val event = PingEvent(address, default).emit()
-        return event.result
+        return event.result.takeIf { !event.cancelled }
     }
 
     fun disconnected(player: ProxiedPlayer) {
         Server.logger.info("Player ${player.connectPacket.name} disconnect")
         players.remove(player)
         PlayerDisconnectEvent(player).emit()
+    }
+
+    fun closeAll() {
+        players.toList().forEach { it.close() }
     }
 
     fun connectServer(player: ProxiedPlayer, server: InetSocketAddress? = null) {

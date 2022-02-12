@@ -1,6 +1,7 @@
 package mindustryProxy.lib.packet
 
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCounted
 
 data class UnknownPacket(val typeId: Int, val data: ByteBuf) : Packet(), ReferenceCounted by data {
@@ -16,10 +17,10 @@ data class UnknownPacket(val typeId: Int, val data: ByteBuf) : Packet(), Referen
             throw UnsupportedOperationException() //special in Registry
         }
 
-        override fun encode(buf: ByteBuf, obj: UnknownPacket) {
+        override fun encode(buf: ByteBuf, obj: UnknownPacket): ByteBuf {
             buf.writeByte(obj.typeId)
-            buf.writeBytes(obj.data)
-            obj.data.resetReaderIndex()
+            return Unpooled.compositeBuffer(2)
+                .addComponents(true, buf, obj.data.retainedSlice())
         }
     }
 }

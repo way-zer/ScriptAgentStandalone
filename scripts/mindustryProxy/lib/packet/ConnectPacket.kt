@@ -26,12 +26,12 @@ data class ConnectPacket(
             return ConnectPacket(
                 buf.readInt(), buf.readStringB(),
                 buf.readStringB(), buf.readStringB(), buf.readStringB(),
-                buf.readSlice(16).toByteArray(), buf.readBoolean(),
+                buf.readSlice(16).readByteArray(), buf.readBoolean(),
                 buf.readInt(), List(buf.readByte().toInt()) { buf.readStringB() }
             )
         }
 
-        override fun encode(buf: ByteBuf, obj: ConnectPacket) {
+        override fun encode(buf: ByteBuf, obj: ConnectPacket): ByteBuf {
             buf.writeInt(obj.version)
             buf.writeStringB(obj.versionType)
             buf.writeStringB(obj.name)
@@ -44,6 +44,7 @@ data class ConnectPacket(
             obj.mods.forEach {
                 buf.writeStringB(it)
             }
+            return buf
         }
     }
 }

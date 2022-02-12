@@ -23,7 +23,7 @@ sealed class FrameworkMessage(val typeId: Int) : Packet() {
             }
         }
 
-        override fun encode(buf: ByteBuf, obj: FrameworkMessage) {
+        override fun encode(buf: ByteBuf, obj: FrameworkMessage): ByteBuf {
             buf.writeByte(obj.typeId)
             when (obj) {
                 is Ping -> {
@@ -34,6 +34,7 @@ sealed class FrameworkMessage(val typeId: Int) : Packet() {
                 is RegisterTCP -> buf.writeInt(obj.id)
                 else -> Unit
             }
+            return buf
         }
     }
 }

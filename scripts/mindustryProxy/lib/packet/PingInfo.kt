@@ -25,7 +25,7 @@ data class PingInfo(
             )
         }
 
-        override fun encode(buf: ByteBuf, obj: PingInfo) {
+        override fun encode(buf: ByteBuf, obj: PingInfo): ByteBuf {
             buf.writeString(obj.name, byte = true)
             buf.writeString(obj.map, byte = true)
             buf.writeInt(obj.players)
@@ -36,6 +36,7 @@ data class PingInfo(
             buf.writeInt(obj.limit)
             buf.writeString(obj.desc, byte = true)
             buf.writeString(obj.modeName, byte = true)
+            return buf
         }
     }
 }

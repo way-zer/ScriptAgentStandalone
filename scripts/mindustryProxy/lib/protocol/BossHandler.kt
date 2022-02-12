@@ -3,8 +3,11 @@ package mindustryProxy.lib.protocol
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.socket.SocketChannel
+import io.netty.util.ReferenceCountUtil
+import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.Packet
-import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.util.logging.Level
 
 class BossHandler(val channel: SocketChannel) : ChannelInboundHandlerAdapter() {
     class FailHandlePacket(packet: Packet, cause: Throwable) : Exception("Fail to handle $packet", cause)
@@ -24,8 +27,8 @@ class BossHandler(val channel: SocketChannel) : ChannelInboundHandlerAdapter() {
 
     lateinit var handler: Handler
     val con = object : Connection {
-        override val address: InetAddress
-            get() = channel.remoteAddress().address
+        override val address: InetSocketAddress
+            get() = channel.remoteAddress()
         override val isActive: Boolean
             get() = channel.isActive
         override val unsafe: SocketChannel
@@ -33,7 +36,15 @@ class BossHandler(val channel: SocketChannel) : ChannelInboundHandlerAdapter() {
 
         override fun sendPacket(packet: Packet, udp: Boolean) {
             packet.udp = udp
-            channel.write(packet)
+            if (!channel.isActive) {
+                ReferenceCountUtil.release(packet)
+                return
+            }
+            channel.write(packet).addListener {
+                if (!it.isSuccess) {
+                    Server.logger.log(Level.WARNING, "Fail to sendPacket $packet", it.cause())
+                }
+            }
         }
 
         override fun setBossHandler(handler: Handler) {
@@ -59,7 +70,6 @@ class BossHandler(val channel: SocketChannel) : ChannelInboundHandlerAdapter() {
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        checkRef(msg)
         msg as Packet
         try {
             handler.handle(con, msg)

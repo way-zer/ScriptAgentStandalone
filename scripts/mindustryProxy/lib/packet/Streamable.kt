@@ -3,28 +3,31 @@ package mindustryProxy.lib.packet
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCounted
+import mindustryProxy.lib.Server
 
 open class StreamBegin(val id: Int, val total: Int, val type: Int) : Packet() {
     /**if true, the proxy will build all streamChunk together*/
     var needBuild = false
 
     class StreamBuilder(
-        id: Int, total: Int, type: Int,
-        private val buildBuf: ByteBuf = Unpooled.buffer(total, total)
-    ) : StreamBegin(id, total, type) {
-        var built: Streamable? = null
+        val id: Int, val total: Int, val type: Int
+    ) {
+        private val buildBuf = Unpooled.compositeBuffer()
 
         @Synchronized
-        fun tryBuild(packet: StreamChunk): Boolean {
-            if (built != null) error("One Streamable can only build once")
-            if (packet.id == this.id) {
-                buildBuf.writeBytes(packet.data)
-                if (buildBuf.readableBytes() == total) {
-                    built = Streamable(buildBuf)
-                    return true
-                }
+        fun tryBuild(packet: StreamChunk): Streamable? {
+            assert(packet.id == id) {
+                packet.release()
+                "StreamChunk must have the same id"
             }
-            return false
+            packet.touch("StreamBuilder")
+            buildBuf.addComponent(true, packet.data.slice())
+            if (buildBuf.readableBytes() > total)
+                Server.logger.warning("StreamBuilder: buildBuf.readableBytes() > total")
+            return if (buildBuf.readableBytes() == total)
+                Streamable(buildBuf)
+            else
+                null
         }
 
         fun release() {
@@ -39,10 +42,11 @@ open class StreamBegin(val id: Int, val total: Int, val type: Int) : Packet() {
             return StreamBegin(buf.readInt(), buf.readInt(), buf.readByte().toInt())
         }
 
-        override fun encode(buf: ByteBuf, obj: StreamBegin) {
+        override fun encode(buf: ByteBuf, obj: StreamBegin): ByteBuf {
             buf.writeInt(obj.id)
             buf.writeInt(obj.total)
             buf.writeByte(obj.type)
+            return buf
         }
     }
 }
@@ -60,10 +64,11 @@ class StreamChunk(val id: Int, val data: ByteBuf) : Packet(), ReferenceCounted b
             return StreamChunk(buf.readInt(), buf.readRetainedSlice(buf.readShort().toInt()))
         }
 
-        override fun encode(buf: ByteBuf, obj: StreamChunk) {
+        override fun encode(buf: ByteBuf, obj: StreamChunk): ByteBuf {
             buf.writeInt(obj.id)
             buf.writeShort(obj.data.readableBytes())
-            buf.writeBytes(obj.data)
+            return Unpooled.compositeBuffer(2)
+                .addComponents(true, buf, obj.data.retainedSlice())
         }
     }
 }

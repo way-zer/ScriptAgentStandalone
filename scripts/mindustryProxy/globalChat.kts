@@ -1,7 +1,6 @@
 package mindustryProxy
 
 import io.netty.buffer.ByteBuf
-import mindustryProxy.lib.Manager
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.Packet
 import mindustryProxy.lib.packet.PacketIdMapper
@@ -13,8 +12,9 @@ class SendChatMessageCallPacket(val message: String) : Packet() {
             return SendChatMessageCallPacket(buf.readStringB())
         }
 
-        override fun encode(buf: ByteBuf, obj: SendChatMessageCallPacket) {
+        override fun encode(buf: ByteBuf, obj: SendChatMessageCallPacket): ByteBuf {
             buf.writeStringB(obj.message)
+            return buf
         }
     }
 
@@ -27,8 +27,9 @@ class SendMessageCallPacket(val message: String) : Packet() {
             return SendMessageCallPacket(buf.readStringB())
         }
 
-        override fun encode(buf: ByteBuf, obj: SendMessageCallPacket) {
+        override fun encode(buf: ByteBuf, obj: SendMessageCallPacket): ByteBuf {
             buf.writeStringB(obj.message)
+            return buf
         }
     }
 

@@ -1,7 +1,10 @@
 package mindustryProxy
 
+import io.netty.buffer.Unpooled
+import io.netty.channel.socket.DatagramPacket
 import mindustryProxy.lib.event.PingEvent
 import mindustryProxy.lib.packet.PingInfo
+import mindustryProxy.lib.protocol.UDPMultiplex
 import mindustryProxy.lib.protocol.UpStreamConnection
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -16,16 +19,20 @@ listenTo<PingEvent> {
         lastResult = result
     val server = Manager.defaultServer
     if (System.currentTimeMillis() - lastTime > cacheTime && ping.compareAndSet(false, true)) {
-        try {
-            UpStreamConnection.ping(server)?.let {
-                lastResult = it
-                lastTime = System.currentTimeMillis()
+        cancelled = true
+        Server.launch {
+            val result = try {
+                UpStreamConnection.ping(server)?.also {
+                    lastResult = it
+                    lastTime = System.currentTimeMillis()
+                } ?: return@launch
+            } catch (e: Exception) {
+                return@launch logger.warning("fail to ping ${server.hostName}: $e")
+            } finally {
+                ping.set(false)
             }
-        } catch (e: Exception) {
-            logger.warning("fail to ping ${server.hostName}: ${e.localizedMessage}")
-        } finally {
-            ping.set(false)
+            val resp = PingInfo.encode(Unpooled.directBuffer(), result)
+            UDPMultiplex.send(DatagramPacket(resp, addr))
         }
-    }
-    result = lastResult!!
+    } else result = lastResult!!
 }

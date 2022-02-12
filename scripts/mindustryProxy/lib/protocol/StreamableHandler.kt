@@ -1,9 +1,8 @@
 package mindustryProxy.lib.protocol
 
-import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.MessageToMessageCodec
-import io.netty.util.ReferenceCountUtil
+import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.Registry
 import mindustryProxy.lib.packet.StreamBegin
 import mindustryProxy.lib.packet.StreamChunk
@@ -13,27 +12,19 @@ class StreamableHandler : MessageToMessageCodec<StreamChunk, Streamable>() {
     private var lastId = 0
     private val streamableMap = mutableMapOf<Int, StreamBegin.StreamBuilder>()
     override fun decode(ctx: ChannelHandlerContext?, packet: StreamChunk, out: MutableList<Any>) {
-        var info: StreamBegin.StreamBuilder? = null
-        val result = synchronized(streamableMap) {
-            info = streamableMap[packet.id] ?: return@synchronized false
-            info!!.tryBuild(packet).also {
-                if (it && info!!.built != null) {
-                    streamableMap.remove(packet.id)
-                }
-            }
-        }
-        if (result) {
-            info!!.built?.let {
-                try {
-                    out.add(Registry.decodeWithId(info!!.type, it.stream))
-                } finally {
-                    it.release()
-                }
-            }
-            return
-        }
         packet.retain()
-        out.add(packet)
+        val (type, built) = synchronized(streamableMap) {
+            val info = streamableMap[packet.id]
+            if (info == null) {
+                out.add(packet)
+                return
+            }
+            info.tryBuild(packet)?.let {
+                streamableMap.remove(info.id)
+                info.type to it
+            } ?: return
+        }
+        out.add(Registry.decodeWithId(type, built.stream))
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
@@ -42,6 +33,8 @@ class StreamableHandler : MessageToMessageCodec<StreamChunk, Streamable>() {
             synchronized(streamableMap) {
                 streamableMap[msg.id]?.release()
                 streamableMap[msg.id] = StreamBegin.StreamBuilder(msg.id, msg.total, msg.type)
+                if (streamableMap.size > 1)
+                    Server.logger.warning("StreamableHandler: streamableMap.size(${streamableMap.size}) > 1")
             }
         }
     }
@@ -51,9 +44,9 @@ class StreamableHandler : MessageToMessageCodec<StreamChunk, Streamable>() {
         val cid = lastId
         val stream = msg.stream.slice()
         out.add(StreamBegin(cid, stream.readableBytes(), msg.factory.packetId!!))
-        while (stream.readableBytes() > 512)
-            out.add(StreamChunk(cid, stream.readSlice(512)))
-        out.add(StreamChunk(cid, stream.readRetainedSlice(stream.readableBytes())))
+        while (stream.isReadable)
+            out.add(StreamChunk(cid, stream.readRetainedSlice(stream.readableBytes().coerceAtMost(512))))
+        stream.release()
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {

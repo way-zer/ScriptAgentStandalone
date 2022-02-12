@@ -3,6 +3,8 @@
 @file:Import("org.lz4:lz4-java:1.7.1", mavenDepends = true)
 @file:Import("mindustryProxy.lib.*", defaultImport = true)
 
+package mindustryProxy
+
 import io.netty.util.ResourceLeakDetector
 import mindustryProxy.lib.packet.PacketIdMapper
 import java.net.InetSocketAddress
@@ -16,8 +18,6 @@ config.key("server", "mdt.wayzer.cf", "默认服务器") {
 config.key("leakDetectorLevel", ResourceLeakDetector.Level.SIMPLE, "Netty 泄漏探测级别") {
     ResourceLeakDetector.setLevel(it)
 }
-generateHelper()
-
 onEnable {
     Server.logger = logger
     PacketIdMapper//load

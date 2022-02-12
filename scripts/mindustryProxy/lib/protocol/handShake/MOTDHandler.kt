@@ -3,32 +3,24 @@ package mindustryProxy.lib.protocol.handShake
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.SimpleChannelInboundHandler
 import io.netty.channel.socket.DatagramPacket
-import kotlinx.coroutines.launch
 import mindustryProxy.lib.Manager
-import mindustryProxy.lib.Server
 import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.PingInfo
 import mindustryProxy.lib.packet.Registry
 
-object MOTDHandler : SimpleChannelInboundHandler<DatagramPacket>() {
+object MOTDHandler : SimpleChannelInboundHandler<DatagramPacket>(false) {
     override fun channelRead0(ctx: ChannelHandlerContext, msg: DatagramPacket) {
         val sender = msg.sender()
         when (val packet = Registry.decodeOnlyFrameworkMessage(msg.content())) {
             is FrameworkMessage.DiscoverHost -> {
-                Server.launch {
-                    val resp = ctx.alloc().directBuffer()
-                    try {
-                        PingInfo.encode(resp, Manager.getPingInfo(sender.address))
-                    } catch (e: Throwable) {
-                        resp.release()
-                        throw e
-                    }
-                    ctx.writeAndFlush(DatagramPacket(resp, sender))
-                }
+                val result = Manager.getPingInfo(sender) ?: return
+                val resp = PingInfo.encode(ctx.alloc().directBuffer(), result)
+                ctx.writeAndFlush(DatagramPacket(resp, sender))
             }
             is FrameworkMessage.RegisterUDP -> {
                 HandShakeHandler.registerUDP(packet.id, msg.sender())
             }
+            else -> {}
         }
     }
 }

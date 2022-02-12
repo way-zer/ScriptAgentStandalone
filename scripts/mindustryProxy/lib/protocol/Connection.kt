@@ -2,10 +2,10 @@ package mindustryProxy.lib.protocol
 
 import io.netty.channel.socket.SocketChannel
 import mindustryProxy.lib.packet.Packet
-import java.net.InetAddress
+import java.net.InetSocketAddress
 
 interface Connection {
-    val address: InetAddress
+    val address: InetSocketAddress
     val isActive: Boolean
     val unsafe: SocketChannel
 

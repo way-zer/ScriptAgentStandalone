@@ -24,6 +24,10 @@ object UDPMultiplex : ChannelInboundHandlerAdapter() {
         child.onUdpRead(msg.content())
     }
 
+    fun send(packet: DatagramPacket) {
+        ctx.writeAndFlush(packet)
+    }
+
     class SubHandler(private val address: InetSocketAddress) : MultiplexHandler() {
         override fun handlerAdded(ctx: ChannelHandlerContext) {
             super.handlerAdded(ctx)
@@ -31,9 +35,7 @@ object UDPMultiplex : ChannelInboundHandlerAdapter() {
             bound[address] = this
         }
 
-        override fun writeUdp(msg: ByteBuf) {
-            ctx.writeAndFlush(DatagramPacket(msg, address))
-        }
+        override fun writeUdp(msg: ByteBuf) = send(DatagramPacket(msg, address))
 
         override fun handlerRemoved(ctx: ChannelHandlerContext) {
             super.handlerRemoved(ctx)

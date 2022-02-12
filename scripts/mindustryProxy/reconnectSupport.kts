@@ -2,7 +2,6 @@ package mindustryProxy
 
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufInputStream
-import mindustryProxy.lib.Manager
 import mindustryProxy.lib.event.PlayerPacketEvent
 import mindustryProxy.lib.packet.PacketIdMapper
 import mindustryProxy.lib.packet.UnknownPacket
@@ -25,6 +24,10 @@ listenTo<PlayerPacketEvent> {
             val ip = readStr()
             val port = readInt()
             resetReaderIndex()
+            if (ip == "mdt.wayzer.cf") {
+                cancelled = false
+                return@listenTo
+            }
             Manager.connectServer(player, InetSocketAddress(ip, port))
         }
     }
