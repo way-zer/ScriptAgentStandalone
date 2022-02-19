@@ -65,7 +65,6 @@ object HandShakeHandler : ChannelInboundHandlerAdapter() {
         val con = Server.afterHandshake(tcp, multiplex, isUpstream = false)
         Manager.connected(con)
         con.sendPacket(FrameworkMessage.RegisterUDP(id), false)
-        con.flush()
         return true
     }
 }

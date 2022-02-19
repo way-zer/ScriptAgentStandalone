@@ -10,6 +10,8 @@ import java.util.concurrent.ConcurrentHashMap
 object UDPMultiplex : ChannelInboundHandlerAdapter() {
     private lateinit var ctx: ChannelHandlerContext
     private val bound = ConcurrentHashMap<InetSocketAddress, SubHandler>()
+    private val lastRead = mutableSetOf<SubHandler>()
+
     override fun handlerAdded(ctx: ChannelHandlerContext) {
         this.ctx = ctx
     }
@@ -24,8 +26,22 @@ object UDPMultiplex : ChannelInboundHandlerAdapter() {
         child.onUdpRead(msg.content())
     }
 
-    fun send(packet: DatagramPacket) {
+    override fun channelReadComplete(ctx: ChannelHandlerContext) {
+        super.channelReadComplete(ctx)
+        lastRead.forEach { it.onUdpReadComplete() }
+        lastRead.clear()
+        ctx.flush()
+    }
+
+    fun sendSingle(packet: DatagramPacket) {
         ctx.writeAndFlush(packet)
+    }
+
+    private var lastFlush = 0L
+    private fun tryFlush() {
+        if (System.currentTimeMillis() - lastFlush > 50)
+            ctx.flush()
+        lastFlush = System.currentTimeMillis()
     }
 
     class SubHandler(private val address: InetSocketAddress) : MultiplexHandler() {
@@ -35,7 +51,14 @@ object UDPMultiplex : ChannelInboundHandlerAdapter() {
             bound[address] = this
         }
 
-        override fun writeUdp(msg: ByteBuf) = send(DatagramPacket(msg, address))
+        override fun writeUdp(msg: ByteBuf) {
+            UDPMultiplex.ctx.write(DatagramPacket(msg, address))
+        }
+
+        override fun flush(ctx: ChannelHandlerContext?) {
+            super.flush(ctx)
+            tryFlush()
+        }
 
         override fun handlerRemoved(ctx: ChannelHandlerContext) {
             super.handlerRemoved(ctx)

@@ -5,13 +5,14 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.*
 import io.netty.channel.socket.DatagramChannel
 import kotlinx.coroutines.suspendCancellableCoroutine
+import mindustryProxy.lib.packet.FrameworkMessage
 import mindustryProxy.lib.packet.Packet
 import mindustryProxy.lib.packet.Registry
 import java.net.InetSocketAddress
 import kotlin.coroutines.resume
 
 abstract class MultiplexHandler : ChannelDuplexHandler() {
-    private lateinit var ctx: ChannelHandlerContext
+    protected lateinit var ctx: ChannelHandlerContext
     override fun handlerAdded(ctx: ChannelHandlerContext) {
         this.ctx = ctx
     }
@@ -30,7 +31,12 @@ abstract class MultiplexHandler : ChannelDuplexHandler() {
             } catch (e: Throwable) {
                 promise.setFailure(e)
             }
-        } else ctx.write(out, promise)
+        } else {
+            if (packet is FrameworkMessage)
+                ctx.writeAndFlush(out, promise)
+            else
+                ctx.write(out, promise)
+        }
     }
 
     abstract fun writeUdp(msg: ByteBuf)
@@ -40,15 +46,28 @@ abstract class MultiplexHandler : ChannelDuplexHandler() {
         ctx.fireChannelRead(packet)
     }
 
+    fun onUdpReadComplete() {
+        ctx.fireChannelReadComplete()
+    }
+
     protected class WarpSingleChannel(val udp: DatagramChannel) : MultiplexHandler() {
         val udpHandler = object : ChannelInboundHandlerAdapter() {
             override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
                 onUdpRead(msg as ByteBuf)
             }
+
+            override fun channelReadComplete(ctx: ChannelHandlerContext?) {
+                super.channelReadComplete(ctx)
+                onUdpReadComplete()
+            }
         }
 
         override fun writeUdp(msg: ByteBuf) {
-            udp.writeAndFlush(msg)
+            udp.write(msg)
+        }
+
+        override fun flush(ctx: ChannelHandlerContext) {
+            udp.flush()
         }
 
         override fun channelInactive(ctx: ChannelHandlerContext) {

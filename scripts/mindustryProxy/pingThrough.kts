@@ -32,7 +32,7 @@ listenTo<PingEvent> {
                 ping.set(false)
             }
             val resp = PingInfo.encode(Unpooled.directBuffer(), result)
-            UDPMultiplex.send(DatagramPacket(resp, addr))
+            UDPMultiplex.sendSingle(DatagramPacket(resp, addr))
         }
     } else result = lastResult!!
 }

@@ -15,7 +15,7 @@ object MOTDHandler : SimpleChannelInboundHandler<DatagramPacket>(false) {
             is FrameworkMessage.DiscoverHost -> {
                 val result = Manager.getPingInfo(sender) ?: return
                 val resp = PingInfo.encode(ctx.alloc().directBuffer(), result)
-                ctx.writeAndFlush(DatagramPacket(resp, sender))
+                ctx.write(DatagramPacket(resp, sender))
             }
             is FrameworkMessage.RegisterUDP -> {
                 HandShakeHandler.registerUDP(packet.id, msg.sender())

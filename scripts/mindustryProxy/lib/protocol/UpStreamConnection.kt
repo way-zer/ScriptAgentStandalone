@@ -9,7 +9,6 @@ import io.netty.channel.epoll.EpollSocketChannel
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.handler.timeout.ReadTimeoutHandler
 import io.netty.util.ReferenceCountUtil
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -55,6 +54,7 @@ object UpStreamConnection {
             when (packet) {
                 is FrameworkMessage.RegisterTCP -> {
                     con.sendPacket(FrameworkMessage.RegisterUDP(packet.id), udp = true)
+                    con.flush()
                 }
                 is FrameworkMessage.RegisterUDP -> {
                     if (!finish.isCompleted)
@@ -91,18 +91,7 @@ object UpStreamConnection {
             .handler(object : ChannelInitializer<Channel>() {
                 override fun initChannel(ch: Channel) {
                     ch.pipeline().addLast(UDPUnpack)
-                    ch.pipeline().addLast(object : ReadTimeoutHandler(30) {
-                        override fun readTimedOut(ctx: ChannelHandlerContext) {
-                            if (ctx.channel().isActive)
-                                ctx.pipeline().close()
-                        }
-                    })
                     ch.pipeline().addLast(object : ChannelInboundHandlerAdapter() {
-                        override fun channelActive(ctx: ChannelHandlerContext) {
-                            val out = Registry.encode(ctx.alloc().directBuffer(), FrameworkMessage.DiscoverHost)
-                            ctx.writeAndFlush(out)
-                        }
-
                         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
                             result = try {
                                 PingInfo.decode(msg as ByteBuf)
@@ -120,8 +109,15 @@ object UpStreamConnection {
                     })
                 }
             }).connect(server).also {
-                if (!it.channel().closeFuture().await(timeoutMillis))
+                val channel = it.channel()
+                it.addListener {
+                    val out = Registry.encode(channel.alloc().directBuffer(), FrameworkMessage.DiscoverHost)
+                    channel.writeAndFlush(out)
+                }
+                if (!it.channel().closeFuture().await(timeoutMillis)) {
+                    it.channel().close()
                     cause = ConnectTimeoutException()
+                }
             }
         if (result == null && cause != null)
             throw cause!!

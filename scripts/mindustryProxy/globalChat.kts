@@ -44,7 +44,6 @@ fun broadcast(from: String, text: String) {
     val packet = SendMessageCallPacket("[coral][[$from[coral]][white]: $text")
     Manager.players.forEach {
         it.clientCon.sendPacket(packet, false)
-        it.clientCon.flush()
     }
 }
 
