@@ -1,3 +1,11 @@
+> [!WARNING]
+> 这个仓库已经弃用，独立运行功能已合并到[Mindustry仓库](https://github.com/way-zer/ScriptAgent4MindustryExt)
+## Simple Usage with ScriptAgent4MindustryExt loader
+1. 下载ScriptAgent4MindustryExt的loader(jar)
+2. 移除coreMindustry, wayzer, main等Mindustry相关模块
+3. 从[ScriptAgentRegistry](https://github.com/way-zer/ScriptAgentRegistry)下载coreMindustry, ktor模块
+*. TIP: 本仓库的脚本依然可供参考
+
 ## ScriptAgent 独立运行版
 
 ![For Standalone](https://img.shields.io/badge/For-Standalone-orange)
